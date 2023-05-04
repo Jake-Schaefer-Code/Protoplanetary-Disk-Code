@@ -30,7 +30,7 @@ hdul.close()
 
 
 #hdul2 = fits.open('/Users/jakeschaefer/Desktop/research/fits1.fits') 
-hdul2 = fits.open('/Users/jakeschaefer/Desktop/disk_Jmod.fits') #change inner disk so not visible, 
+hdul2 = fits.open('/Users/jakeschaefer/Desktop/research/fits1.fits') #change inner disk so not visible, 
 #and make outer disk so that it is barely visible
 #2 ways to make it less visible: make it less dense, so light doesnt have a chance to scatter off of it (it would be a settled disk)
 #outer portion is not part of the chi squared because if it is too bright it is wrong
@@ -39,10 +39,6 @@ hdul2 = fits.open('/Users/jakeschaefer/Desktop/disk_Jmod.fits') #change inner di
 data2 = hdul2[0].data
 header2 = hdul2[0].header
 hdul2.close()
-plt.imshow(data2,origin='lower',vmin=0.0,vmax=200)
-plt.colorbar()
-plt.show()
-plt.close()
 #imagine have some image[ymin:ymax, xmin:xmax]
 #[ycent-176/2:ycent+176/2, ] #check size of array to know if off by 1.  
 #put really hot pixel in the center and see if it moves
@@ -52,7 +48,7 @@ plt.close()
 
 center = (header['STAR_X'],header['STAR_Y'])
 tmp = data[1]
-tmp = tmp[int(center[0] - 17/2):int(center[0] + 177/2),int(center[1] - 177/2):int(center[1] + 177/2)]
+tmp = tmp[int(center[0] - 177/2):int(center[0] + 177/2),int(center[1] - 177/2):int(center[1] + 177/2)]
 #print(len(tmp[:,0]))
 #print(center[0] - 176/2)
 center = (176/2,176/2)
@@ -71,11 +67,11 @@ std = np.std(np.nan_to_num(mask2*tmp))
 #mask2[np.abs(data[1]) < std] = 0.0
 image = mask2*tmp
 image[image==0.0] = np.nan
-print(image[88,88])
-image[88,88] = 3;
-for i in range(len(image[0,:])):
-    image[i,88] = 3
-    image[88,i] = 3
+#print(image[88,88])
+#image[88,88] = 3;
+#for i in range(len(image[0,:])):
+    #image[i,88] = 3
+    #image[88,i] = 3
 plt.imshow(image,origin='lower',vmin=0.0,vmax=3)
 plt.colorbar()
 plt.show()
@@ -94,5 +90,5 @@ plt.close()
 #image = np.nan_to_num(image,0.0000000000001)
 #image[image==0.0] = 0.0000000000001
 #image_rot[image_rot==0.0] = 0.0000000000001
-test_chi = chi_square(image,image_rot)
+test_chi = chi_square(image,image)
 print(test_chi)
