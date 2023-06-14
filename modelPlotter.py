@@ -2,20 +2,8 @@ import matplotlib.pyplot as plt
 import sys
 
 """
-This is a terribly written module that will plot the SED with error bars against
-a model given in the command line and calculate the chi squared value.
-
-To do:
--- there's a lot of repetition between the two primary functions. Need to trim the repeats
-out and just make them their own function. 
-
--- I would love to make this runnable from anywhere, and I also would like to somehow automate
-the path name, so I don't have to cd every time I want to run this module.
-
--- document the weird parts of this that I will definitely forget
-
-As of 3/2/2023, this module is running
-smoothly.
+Code to plot model SED against observed SED and calculate chi-squared value. Requires path of model SED file as an argument,
+i.e. python modelPlotter.py modelpathname
 """
 
 def findChi(modelPath, dataPath):
