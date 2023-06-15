@@ -6,3 +6,4 @@ chi.py is the SED chi-squared test.
 csvWriter.py is not complete. Right now it returns a CSV file with the name of the sheet and the SED chi-squared value.
 In the future csvWriter.py should ideally update an existing spreadsheet so that all the chi-squared values are easily accessible.
 I also need to integrate Jake's image chi-squared script, but that can wait while we explore the SED.
+https://docs.google.com/spreadsheets/d/13k9iSe1oqnPqmU8Ks94cZMo9qkb1QggQ_9BuOZla8Xc/edit#gid=175511598
