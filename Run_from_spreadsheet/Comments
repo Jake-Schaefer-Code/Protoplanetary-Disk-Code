@@ -1,3 +1,4 @@
+15 June 2023
 These are the scripts that I'm running on the lab computer. 
 modelgen.sh is the master script. Calling bash modelgen.sh sheetname from the command line will run all the other scripts.
 paramWriter.py reads a Google sheet and overwrites the variables onto an existing parameter file (modParameters.dat). 
@@ -7,3 +8,18 @@ csvWriter.py is not complete. Right now it returns a CSV file with the name of t
 In the future csvWriter.py should ideally update an existing spreadsheet so that all the chi-squared values are easily accessible.
 I also need to integrate Jake's image chi-squared script, but that can wait while we explore the SED.
 https://docs.google.com/spreadsheets/d/13k9iSe1oqnPqmU8Ks94cZMo9qkb1QggQ_9BuOZla8Xc/edit#gid=175511598
+
+
+16 June 2023
+Updated all the scripts to current versions. Changed the methods used to write chi-squared values to the Google sheet
+because the old method a) had to overwrite the existing sheet and b) updated based on a local csv file on jtasson62810,
+meaning it did not work for multiple users. The new version, sheetAppender.py, takes two values as inputs and appends them 
+to the Google sheet rather than overwriting.
+Updated modelPlotter.py to produce images of a reasonable size and resolution.
+Added pngUpload.py, which takes a file as command line input and uploads it to my SEDs folder on the shared Google Drive. If you
+want to change the folder, replace the sheet key on line 24 with the desired sheet key (the string between /d/ and /edit#... in the sheet url).
+Updated modelgen.sh to account for changes in programs.
+The scripts that write to Google Drive (pngUpload.py and sheetAppender.py) require Google API keys and credentials files. I did not upload
+them yet because I am slightly concerned about putting private keys on github, but can provide them to make the code runnable. I am not sure how
+much tinkering will need to happen for them to work -- I had to confirm my Google account on the actual lab computer in addition to authorizing 
+specific localhost addresses on my API page. I might need to update the credentials for different machines.
