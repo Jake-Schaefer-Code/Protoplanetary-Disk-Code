@@ -23,3 +23,30 @@ The scripts that write to Google Drive (pngUpload.py and sheetAppender.py) requi
 them yet because I am slightly concerned about putting private keys on github, but can provide them to make the code runnable. I am not sure how
 much tinkering will need to happen for them to work -- I had to confirm my Google account on the actual lab computer in addition to authorizing 
 specific localhost addresses on my API page. I might need to update the credentials for different machines.
+
+How each file is called in the code:
+
+bash modelgen.sh sheetname
+modelgen calls python3 paramWriter.py sheetname
+modelgen calls python3 csvWriter.py sheetname sheetname
+csvWriter imports modelPlotter and sheetAppender
+csvWriter calls sheetAppender.main(sheetname, chi-squared value)
+csvWriter calls modelPlotter.main("path/to/SED/file")
+modelgen calls python3 pngUpload.py "path/to/SED/image"
+
+Command line args: modelgen, csvWriter, pngUpload, paramWriter
+import + run main w/ args: modelPlotter, sheetAppender
+
+Packages needed:
+matplotlib
+sys
+pandas
+numpy
+pydrive
+gspread
+google.oauth2.service_account
+os
+
+modelgen should be in the home directory and all other files should be in an immediate child directory named models.
+Several of the scripts call my specific path names because running ~/models/ instead of /home/driscollg/models/ threw errors,
+so you will need to update them for your directories.
