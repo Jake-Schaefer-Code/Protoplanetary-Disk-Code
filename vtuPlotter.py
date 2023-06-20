@@ -47,6 +47,7 @@ def main():
             lucy_list.append(file)
     
     maxLucy = 0
+    maxFile = None
 
     for file in lucy_list:
         lucyNum = int(str(file.split('_')[1])[:-4]) # pulling out the number between lucy_ and .vtu
@@ -54,7 +55,9 @@ def main():
             maxLucy = lucyNum
             maxFile = file
     
-    plot(maxFile, variable)
+    if maxFile != None:
+        plot(maxFile, variable)
 
 if __name__ == '__main__':
     main()
+
