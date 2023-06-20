@@ -18,7 +18,7 @@ def plot(filename, variable):
 
     valArray = grid[varname] # makes it easier to work with
 
-    for i in range(len(valArray)): # convert to log values. Fix: sets the smallest values to a dummy number instead of dealing with them
+    for i in range(len(valArray)): # convert to log values. Need to fix: sets the smallest values to a dummy number instead of dealing with them
         value = valArray.GetValue(i)
         if value > 0.0001:
             valArray.SetValue(i, math.log(value))
