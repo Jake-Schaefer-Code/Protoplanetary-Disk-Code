@@ -1,10 +1,19 @@
-def plot(filename, variable):
+"""
+A module to plot the lucy.vtu files produced by torus. Runnable from the command line: python3 vtuPlotter.py directory variable, where directory is
+the name of the directory (must be within the working directory) containing the lucy files and variable is the desired variable to plot (e.g.
+temperature, dust1, dust2).
+Requirements:
+- vtuPlotter in the working directory
+- the name of a directory containing lucy files within the working directory
+    - if there are no lucy files, the program will not produce an image but should not crash
+"""
+def plot(directory, filename, variable):
     import pyvista as pv
     import math
 
     #filename = 'lucy_000004004.vtu'
     #variable = 'temperature'
-    filename = str(filename)
+    filename = str(directory) + '/' + str(filename)
     variable = str(variable)
 
     grid = pv.read(filename) # read lucy file in as a pyvista mesh
@@ -18,7 +27,7 @@ def plot(filename, variable):
 
     valArray = grid[varname] # makes it easier to work with
 
-    for i in range(len(valArray)): # convert to log values. Need to fix: sets the smallest values to a dummy number instead of dealing with them
+    for i in range(len(valArray)): # convert to log values. Fix: sets the smallest values to a dummy number instead of dealing with them
         value = valArray.GetValue(i)
         if value > 0.0001:
             valArray.SetValue(i, math.log(value))
@@ -38,9 +47,10 @@ def main():
     import sys
     import os
 
-    variable = str(sys.argv[1]) # command line argument
+    directory = str(sys.argv[1]) + '/'
+    variable = str(sys.argv[2]) # command line argument
 
-    total_dir_list = os.listdir() # all files in directory
+    total_dir_list = os.listdir(directory) # all files in directory
     lucy_list = []
     for file in total_dir_list:
         if str(file)[-4:] == '.vtu':
@@ -56,7 +66,7 @@ def main():
             maxFile = file
     
     if maxFile != None:
-        plot(maxFile, variable)
+        plot(directory, maxFile, variable)
 
 if __name__ == '__main__':
     main()
