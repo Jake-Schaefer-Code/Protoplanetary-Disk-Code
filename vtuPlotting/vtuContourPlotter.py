@@ -1,3 +1,23 @@
+"""
+A module to plot the lucy.vtu files produced by torus in matplotlib. Runnable from the command line: python3 vtuPlotter.py directory variable, where directory is
+the name of the directory (must be within the working directory) containing the lucy files and variable is the desired variable to plot (e.g.
+temperature, dust1, dust2). 
+
+This module does NOT plot the actual cells of the lucy grid. Matplotlib requires that an irregular mesh can be mapped to a rectangular grid in order
+to plot the actual mesh cells. Functions like pcolormesh require an instance of np.meshgrid, either directly in the code or in the background. However, 
+the smallest lucy cells are very small (side lengths ~0.1) and the dimensions of the grid are on the order of hundreds of thousands. Finding all the cell coordinates
+requires a significant amount of memory (I received memory requests of ~22 TB) and is not feasible for this module. 
+
+This module plots the contours described by the cell values, which is much more efficient and results in a very similar plot. It currently plots both the contours
+produced by the cell corners and those produced by the cell centers. The cell centers produce a smoother plot.
+
+Requirements:
+- vtuPlotter in the working directory
+- the name of a directory containing lucy files within the working directory
+    - if there are no lucy files, the program will not produce an image but should not crash
+"""
+
+
 def plot(directory, filename, variable):
     import pyvista as pv
     import math
@@ -20,7 +40,7 @@ def plot(directory, filename, variable):
                                                                 # on getting them to display here)
 
     valArray = grid[varname] # makes it easier to work with
-    
+
     minIndexes = []
     for i in range(len(valArray)): # convert to log values. Fix: sets the smallest values to a dummy number instead of dealing with them
         value = valArray.GetValue(i)
@@ -70,8 +90,7 @@ def plot(directory, filename, variable):
     ax1.set_title('Using cell corners')
     ax2.set_title('Using cell centers')
     fig.suptitle(variable + ' contour plots for ' + filename)
-    plt.savefig('contour.png')
-    plt.show()
+    plt.savefig(str(filename.split('/')[-2]) + '.' + variable + '.png')
 
 
 def main():
