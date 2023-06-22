@@ -43,6 +43,7 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         # Runs TORUS and waits
         process = subprocess.Popen([torusDir, runFolder + '/modParameters' + num2 + '.dat'])
         process.communicate()
+        process.wait()
         
         # Finds Chi Square and writes it in a file
         sed = baseDir + '/sed_inc042.dat'
