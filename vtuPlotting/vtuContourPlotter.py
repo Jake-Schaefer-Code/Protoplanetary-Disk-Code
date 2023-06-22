@@ -12,7 +12,7 @@ This module plots the contours described by the cell values, which is much more 
 produced by the cell corners and those produced by the cell centers. The cell centers produce a smoother plot.
 
 Requirements:
-- vtuPlotter in the working directory
+- vtuContourPlotter in the working directory
 - the name of a directory containing lucy files within the working directory
     - if there are no lucy files, the program will not produce an image but should not crash
 """
@@ -32,64 +32,61 @@ def plot(directory, filename, variable):
 
     grid = pv.read(filename) # read lucy file in as a pyvista mesh
 
-    varname = variable + ' (log scale)'
-    grid[varname] = pv.plotting.normalize(grid[variable]) # the lucy file is basically a bunch of vtk files stacked on top
+    valArray = grid[variable] # the lucy file is basically a bunch of vtk files stacked on top
                                                                 # of each other, which is why just plotting the lucy file either
                                                                 # doesn't work or returns a blank square. This lets us work with 
                                                                 # only one of the variables (VisIt has all the variable names, working
                                                                 # on getting them to display here)
 
-    valArray = grid[varname] # makes it easier to work with
 
     minIndexes = []
-    for i in range(len(valArray)): # convert to log values. Fix: sets the smallest values to a dummy number instead of dealing with them
+    for i in range(len(valArray)): # convert to log values
         value = valArray.GetValue(i)
-
-        if value > 0.0001:
-            valArray.SetValue(i, math.log(value))
-        else:
+        if value > 0.0001: # if value won't throw a log error
+            valArray.SetValue(i, np.log10(value))
+        else: # if the value is too small to log, store the index 
             minIndexes.append(i)
 
-    minVal = min(valArray)
-    for i in minIndexes:
+    minVal = min(valArray) # get the minimum of the logged values
+    for i in minIndexes: # go through the stored indicies and set all those values to the minimum
         value = valArray.GetValue(i)
         valArray.SetValue(i, minVal)
-
-    pts = grid.points
-    pts = np.asarray(pts)[:,:2]
-
-    centers = grid.cell_centers()
+    
+    centers = grid.cell_centers() # plot the center points for the contour
     centerPoints = np.asarray(centers.GetPoints().GetData())
-
-    x = pts[:,0]
-    y = pts[:,1]
-
     centerX = centerPoints[:,0]
     centerY = centerPoints[:,1]
 
+    centerX = centerX.transpose() # they come out as column vectors
+    centerY = centerY.transpose()
+
     u = np.array([np.asarray(valArray)])
     u = u.transpose()
-    centerU = u[:,0].tolist()
+    centerU = u[:,0]
 
-    
+    ''' uncomment to plot the contours using the cell corners
+    pts = grid.points
+    pts = np.asarray(pts)[:,:2]
+    x = pts[:,0]
+    y = pts[:,1]
+
     x= x.transpose()
     y = y.transpose()
     x = x.tolist()
-    y = y.tolist()
-
-    centerX = centerX.transpose()
-    centerY = centerY.transpose()
-    centerX.tolist()
-    centerY.tolist()
-
+    y = y.tolist() 
     bigZ = np.repeat(u,4)
-    
-    fig, (ax1, ax2) = plt.subplots(1,2, figsize = (20,8))
-    ax1.tricontourf(x,y,bigZ, levels = 30)
-    ax2.tricontourf(centerX, centerY, centerU, levels=30)
-    ax1.set_title('Using cell corners')
-    ax2.set_title('Using cell centers')
-    fig.suptitle(variable + ' contour plots for ' + filename)
+
+    plt.tricontourf(x,y,bigZ, levels = 30)
+    plt.title('Using cell corners')
+    plt.show()
+    '''
+
+
+    fig = plt.figure(figsize = (10,8))
+    plt.tricontourf(centerX, centerY, centerU, levels=50)
+    plt.title(variable + ' contour plot for ' + filename)
+    plt.set_cmap('inferno')
+    plt.colorbar()
     plt.savefig(str(filename.split('/')[-2]) + '.' + variable + '.png')
 
 
@@ -103,7 +100,7 @@ def main():
     total_dir_list = os.listdir(directory) # all files in directory
     lucy_list = []
     for file in total_dir_list:
-        if str(file)[-4:] == '.vtu':
+        if str(file)[:4] == 'lucy' and str(file)[-4:] == '.vtu': # there are some lucy.dat files and other .vtu files
             lucy_list.append(file)
     
     maxLucy = 0
@@ -111,11 +108,11 @@ def main():
 
     for file in lucy_list:
         lucyNum = int(str(file.split('_')[1])[:-4]) # pulling out the number between lucy_ and .vtu
-        if lucyNum > maxLucy:
+        if lucyNum > maxLucy: # iterate to get the latest lucy file
             maxLucy = lucyNum
             maxFile = file
     
-    if maxFile != None:
+    if maxFile != None: # only plot if there is a lucy file
         plot(directory, maxFile, variable)
 
 if __name__ == '__main__':
