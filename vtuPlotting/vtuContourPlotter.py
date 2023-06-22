@@ -20,13 +20,20 @@ def plot(directory, filename, variable):
                                                                 # on getting them to display here)
 
     valArray = grid[varname] # makes it easier to work with
-
+    
+    minIndexes = []
     for i in range(len(valArray)): # convert to log values. Fix: sets the smallest values to a dummy number instead of dealing with them
         value = valArray.GetValue(i)
+
         if value > 0.0001:
             valArray.SetValue(i, math.log(value))
         else:
-            valArray.SetValue(i,-9)
+            minIndexes.append(i)
+
+    minVal = min(valArray)
+    for i in minIndexes:
+        value = valArray.GetValue(i)
+        valArray.SetValue(i, minVal)
 
     pts = grid.points
     pts = np.asarray(pts)[:,:2]
