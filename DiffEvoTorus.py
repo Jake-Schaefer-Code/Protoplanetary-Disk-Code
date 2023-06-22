@@ -21,7 +21,7 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         runFolder = baseDir + "/gen" + str(count) + "/run" + num2
         # Creates new directory for the run number
         subprocess.call(['cd ' + baseDir, '/'], shell=True)
-        subprocess.call(['mkdir run' + num2 + '; cd ' + runFolder, '/'], shell=True)
+        subprocess.call(['mkdir ' + runFolder + '; cd ' + runFolder, '/'], shell=True)
         
         # Creates new Parameters file
         originalParams = open(baseDir + '/modParameters.dat', 'r').read()
