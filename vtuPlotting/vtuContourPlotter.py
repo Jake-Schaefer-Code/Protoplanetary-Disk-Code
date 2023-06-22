@@ -1,15 +1,16 @@
 """
 A module to plot the lucy.vtu files produced by torus in matplotlib. Runnable from the command line: python3 vtuPlotter.py directory variable, where directory is
 the name of the directory (must be within the working directory) containing the lucy files and variable is the desired variable to plot (e.g.
-temperature, dust1, dust2). 
+temperature, dust1, dust2). Also runnable as an imported module.
 
 This module does NOT plot the actual cells of the lucy grid. Matplotlib requires that an irregular mesh can be mapped to a rectangular grid in order
 to plot the actual mesh cells. Functions like pcolormesh require an instance of np.meshgrid, either directly in the code or in the background. However, 
 the smallest lucy cells are very small (side lengths ~0.1) and the dimensions of the grid are on the order of hundreds of thousands. Finding all the cell coordinates
 requires a significant amount of memory (I received memory requests of ~22 TB) and is not feasible for this module. 
 
-This module plots the contours described by the cell values, which is much more efficient and results in a very similar plot. It currently plots the contours 
-produced by the cell centers.
+This module plots the contours described by the cell values, which is much more efficient and results in a very similar plot. It currently plots both the contours
+produced by the cell corners and those produced by the cell centers. The cell centers produce a smoother plot.
+
 
 Requirements:
 - vtuContourPlotter in the working directory
@@ -18,16 +19,26 @@ Requirements:
 """
 
 
-def plot(directory, filename, variable):
+def plot(filename, variable, directory = '', plotsize = 'full'):
+    """
+    Plots a lucy file.
+    Params:
+    directory: the directory containing the lucy file
+    filename: the name of the lucy file
+    variable: the variable to plot
+    plotsize: the size of the plot. Integer or 'full'
+    """
+
     import pyvista as pv
-    import math
     import matplotlib.pyplot as plt
     import numpy as np
-    import matplotlib.tri as tri
 
     #filename = 'lucy_000004004.vtu'
     #variable = 'temperature'
-    filename = str(directory) + str(filename)
+    if directory != '':
+        filename = str(directory) + '/' + str(filename)
+
+
     variable = str(variable)
 
     grid = pv.read(filename) # read lucy file in as a pyvista mesh
@@ -42,7 +53,7 @@ def plot(directory, filename, variable):
     minIndexes = []
     for i in range(len(valArray)): # convert to log values
         value = valArray.GetValue(i)
-        if value > 0.0001: # if value won't throw a log error
+        if value > 0: # if value won't throw a log error
             valArray.SetValue(i, np.log10(value))
         else: # if the value is too small to log, store the index 
             minIndexes.append(i)
@@ -59,6 +70,9 @@ def plot(directory, filename, variable):
 
     centerX = centerX.transpose() # they come out as column vectors
     centerY = centerY.transpose()
+
+    
+    
 
     u = np.array([np.asarray(valArray)])
     u = u.transpose()
@@ -83,19 +97,31 @@ def plot(directory, filename, variable):
 
 
     fig = plt.figure(figsize = (10,8))
-    plt.tricontourf(centerX, centerY, centerU, levels=50)
+    if plotsize != 'full': # optionally zoom in on the star
+        xMin = 0
+        xMax = plotsize
+        yMin = -1 * int(plotsize/2)
+        yMax = int(plotsize/2)
+        plt.axis([xMin, xMax, yMin, yMax])
+    plt.tricontourf(centerX, centerY, centerU, levels=100)
     plt.title(variable + ' contour plot for ' + filename)
     plt.set_cmap('inferno')
     plt.colorbar()
-    plt.savefig(str(filename.split('/')[-2]) + '.' + variable + '.png')
-
+    if directory != '':
+        plt.savefig(str(filename.split('/')[-2]) + '.' + variable + '.png')
+    else:
+        plt.savefig(variable + '.png')
 
 def main():
     import sys
     import os
 
-    directory = str(sys.argv[1]) + '/'
+    directory = str(sys.argv[1])
     variable = str(sys.argv[2]) # command line argument
+    if len(sys.argv) > 3:
+        plotsize = int(sys.argv[3])
+    else:
+        plotsize = 'full'
 
     total_dir_list = os.listdir(directory) # all files in directory
     lucy_list = []
@@ -113,7 +139,7 @@ def main():
             maxFile = file
     
     if maxFile != None: # only plot if there is a lucy file
-        plot(directory, maxFile, variable)
+        plot(maxFile, variable, directory, plotsize)
 
 if __name__ == '__main__':
     main()
