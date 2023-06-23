@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.collections as cl
 import numpy as np
 
-
+""" This code finds the Chi value based on a set of best fit lines """
 def findChi(modelPath, dataPath):
 
     modelFile = open(modelPath, 'r')
