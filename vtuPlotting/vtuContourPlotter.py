@@ -7,8 +7,8 @@ to plot the actual mesh cells. Functions like pcolormesh require an instance of 
 the smallest lucy cells are very small (side lengths ~0.1) and the dimensions of the grid are on the order of hundreds of thousands. Finding all the cell coordinates
 requires a significant amount of memory (I received memory requests of ~22 TB) and is not feasible for this module. 
 
-This module plots the contours described by the cell values, which is much more efficient and results in a very similar plot. It currently plots both the contours
-produced by the cell corners and those produced by the cell centers. The cell centers produce a smoother plot.
+This module plots the contours described by the cell values, which is much more efficient and results in a very similar plot. It currently plots the contours
+produced by the cell centers.
 
 """
 
