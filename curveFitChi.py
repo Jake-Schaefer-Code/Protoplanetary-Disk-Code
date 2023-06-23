@@ -3,11 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.collections as cl
 import numpy as np
 
-""" 
-This code finds the Chi value based on a set of best fit lines. 
-It returns four Chi values, split up over the range og infrared wavelength data:
-Near IR, Mid IR, Far IR, and Micro (Micro wavelengths are outside the IR spectrum)
-"""
+
 def findChi(modelPath, dataPath):
 
     modelFile = open(modelPath, 'r')
@@ -44,7 +40,7 @@ def findChi(modelPath, dataPath):
 
     for i in range(len(dataLines)):
         valueslist = dataLines[i].split(" ")
-        if valueslist[3] != 'nan' and float(valueslist[3]) != 0:
+        if valueslist[3] != 'nan' and float(valueslist[3]) != 0 and float(valueslist[0])*10**6 != 4.35:
             dataLam.append(float(valueslist[0])*10**6)
             dataFlux.append(float(valueslist[2]))
             error.append(float(valueslist[3]))
