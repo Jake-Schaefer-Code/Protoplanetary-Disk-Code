@@ -40,13 +40,15 @@ def findChi(modelPath, dataPath):
 
     for i in range(len(dataLines)):
         valueslist = dataLines[i].split(" ")
-        if valueslist[3] != 'nan' and float(valueslist[3]) != 0:
+        if valueslist[3] != 'nan' and float(valueslist[3]) != 0 and float(valueslist[0])*10**6 != 4.35:
             dataLam.append(float(valueslist[0])*10**6)
             names.append(valueslist[1])
             dataFlux.append(float(valueslist[2]))
             error.append(float(valueslist[3]))
     for i in range(len(names)):
         names[i] = names[i].split(":")[0]
+    
+
         
             
 
@@ -56,12 +58,20 @@ def findChi(modelPath, dataPath):
     fitPts = [[dataLam[i],dataFlux[i],error[i]] for i in range(len(dataLam))]
     xyerrTuples.sort()
     fitPts.sort()
-    pointDict = {'x':[], 'y':[]}
+    #pointDict = {'x':[], 'y':[]}
     modelPointDict = {'x':[], 'y':[]}
 
-    for tuple in xyerrTuples:
+    """for tuple in xyerrTuples:
         pointDict['x'] += [tuple[0]]
-        pointDict['y'] += [tuple[1]]
+        pointDict['y'] += [tuple[1]]"""
+
+
+    pointDict = {}
+    for i in range(len(names)):
+        if pointDict.get(names[i]) == None:
+            pointDict[names[i]] = [[xyerrTuples[i][0],xyerrTuples[i][1],xyerrTuples[i][2]]]
+        else:
+            pointDict[names[i]] += [[xyerrTuples[i][0],xyerrTuples[i][1],xyerrTuples[i][2]]]
 
     for tuple in modelTuples:
         modelPointDict['x'] += [tuple[0]]
@@ -142,9 +152,23 @@ def findChi(modelPath, dataPath):
     plt.plot([fitPts[i+14][0] for i in range(len(fitPts[14:26]))],[fitPts[i+14][1] for i in range(len(fitPts[14:26]))], color="#FF6600", alpha=0.75)
     plt.plot([fitPts[i+25][0] for i in range(len(fitPts[25:31]))],[fitPts[i+25][1] for i in range(len(fitPts[25:31]))], color="#FF3300", alpha=0.75)
     plt.plot([fitPts[i+30][0] for i in range(len(fitPts[30:]))],[fitPts[i+30][1] for i in range(len(fitPts[30:]))], color="#CC0066", alpha=0.75)
-    plt.errorbar(pointDict['x'], pointDict['y'], yerr = error, fmt = 'None', ecolor='white', alpha=0.5)
-    for i in range(len(names)):
-        plt.scatter(pointDict['x'][i], pointDict['y'][i], marker="o", linewidths=0.5, label = str(names[i]), alpha = 0.75)
+    
+    for key in pointDict:
+        xVals, yVals, errVals = [],[],[]
+        for val in pointDict[key]:
+            xVals += [val[0]]
+            yVals += [val[1]]
+            errVals += [val[2]]
+        plt.scatter(xVals, yVals, marker="o", linewidths=0.5, label = str(key), alpha = 0.75)
+        
+    
+    xVals, yVals, errVals = [],[],[]
+    for tuple in xyerrTuples:
+        xVals += [tuple[0]]
+        yVals += [tuple[1]]
+        errVals += [tuple[2]]
+    plt.errorbar(xVals, yVals, yerr = errVals, fmt = 'None', ecolor='white', alpha=0.5)
+    print(pointDict["ALMA"])
 
     return (nearIrChi,midIrChi,farIrChi, microChi)
 
@@ -167,8 +191,8 @@ def plotModel(modelPath, dataPath):
 
     plt.show()
 
-modelPath = str(sys.argv[1])
-#modelPath = "/Users/jakeschaefer/Desktop/SED/sed68_inc042.dat"
+#modelPath = str(sys.argv[1])
+modelPath = "/Users/jakeschaefer/Desktop/SED/sed68_inc042.dat"
 def main(modelPath):
     plotModel(modelPath, "/Users/jakeschaefer/Desktop/mwc275_phot_cleaned_0.dat")
 
