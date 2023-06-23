@@ -3,7 +3,11 @@ import matplotlib.pyplot as plt
 import matplotlib.collections as cl
 import numpy as np
 
-""" This code finds the Chi value based on a set of best fit lines """
+""" 
+This code finds the Chi value based on a set of best fit lines. 
+It returns four Chi values, split up over the range og infrared wavelength data:
+Near IR, Mid IR, Far IR, and Micro (Micro wavelengths are outside the IR spectrum)
+"""
 def findChi(modelPath, dataPath):
 
     modelFile = open(modelPath, 'r')
