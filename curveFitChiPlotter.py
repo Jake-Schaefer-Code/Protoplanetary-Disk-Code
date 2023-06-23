@@ -121,7 +121,6 @@ def findChi(modelPath, dataPath):
                 errorValue = fitPts[binIndex][2]
                 variance = (modelPoint[1]-errorValue)**2
                 d_chi = (modelPoint[1]-expPoint[1])**2 / expPoint[1] **2
-                #plt.plot([binPoint1[0], binPoint2[0]], [binPoint1[1], binPoint2[1]])
                 if irBin == "nearIr":
                     nearIrChi += d_chi
                 elif irBin == "midIr":
@@ -130,23 +129,6 @@ def findChi(modelPath, dataPath):
                     farIrChi += d_chi
                 else:
                     microChi += d_chi
-
-            #print(binPoint1, binPoint2)
-            #plt.plot([binPoint1[0], binPoint2[0]], [binPoint1[1], binPoint2[1]])
-            """for value in dictOfBins[irBin][valuerange]:
-                modelPoint = value[0]
-                binLine = getLine(binPoint1, binPoint2)
-                expPoint = findIntercept(modelPoint, binLine)
-                errorValue = fitPts[binIndex][2]
-                variance = (modelPoint[1]-errorValue)**2
-                d_chi = (modelPoint[1]-expPoint[1])**2 / variance
-                
-                if irBin == "nearIr":
-                    nearIrChi += d_chi
-                elif irBin == "midIr":
-                    midIrChi += d_chi
-                else:
-                    farIrChi += d_chi"""
         
 
     nearIrChi = (nearIrChi * len(listOfRanges)) / len(listOfRanges[:14])
@@ -169,10 +151,7 @@ def findChi(modelPath, dataPath):
 
 
 def plotModel(modelPath, dataPath):
-    
-    ####### Model
     filename2 = modelPath.split('/')[-2]
-    
     chiVals = findChi(modelPath, dataPath)
 
     plt.title("Near IR $\chi^2$ val: " + str(f'{chiVals[0]:.3f}') +" Mid IR $\chi^2$ val:" + str(f'{chiVals[1]:.3f}') + "\nFar IR $\chi^2$ val: " 
@@ -188,8 +167,8 @@ def plotModel(modelPath, dataPath):
 
     plt.show()
 
-#modelPath = str(sys.argv[1]) # unfamiliar with the syntax, but this seems to be working as intended
-modelPath = "/Users/jakeschaefer/Desktop/SED/sed68_inc042.dat"
+modelPath = str(sys.argv[1])
+#modelPath = "/Users/jakeschaefer/Desktop/SED/sed68_inc042.dat"
 def main(modelPath):
     plotModel(modelPath, "/Users/jakeschaefer/Desktop/mwc275_phot_cleaned_0.dat")
 
