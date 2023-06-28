@@ -1,0 +1,108 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2639
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;\f1\fswiss\fcharset0 ArialMT;\f2\froman\fcharset0 Times-Roman;
+}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\csgray\c0;\cssrgb\c0\c0\c0;}
+\margl1440\margr1440\vieww17500\viewh12480\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs22 \cf2 \CocoaLigature0 bash-3.2$ make install\
+/bin/rm -f /usr/local/lib/libcfitsio.a\
+/bin/cp -a libcfitsio.a /usr/local/lib\
+/bin/rm -f /usr/local/lib/libcfitsio.dylib\
+/bin/cp -a libcfitsio.dylib /usr/local/lib\
+/bin/rm -f /usr/local/lib/libcfitsio.10.4.2.0.dylib\
+/bin/cp -a libcfitsio.10.4.2.0.dylib /usr/local/lib\
+/bin/rm -f /usr/local/lib/libcfitsio.10.dylib\
+/bin/cp -a libcfitsio.10.dylib /usr/local/lib\
+/bin/cp fitsio.h fitsio2.h longnam.h drvrsmem.h /usr/local/include\
+/bin/cp cfitsio.pc /usr/local/lib/pkgconfig\
+bash-3.2$ \
+\
+bash-3.2$ ls -l /usr/local/lib/libcfitsio.*\
+-rwxr-xr-x  1 iraf  staff  1898712 Jun 22 15:13 /usr/local/lib/libcfitsio.10.4.2.0.dylib\
+lrwxr-xr-x  1 iraf  staff       25 Jun 22 15:13 /usr/local/lib/libcfitsio.10.dylib -> libcfitsio.10.4.2.0.dylib\
+-rw-r--r--  1 iraf  staff  6443328 Jun 22 15:13 /usr/local/lib/libcfitsio.a\
+lrwxr-xr-x  1 iraf  staff       19 Jun 22 15:13 /usr/local/lib/libcfitsio.dylib -> libcfitsio.10.dylib\
+bash-3.2$ \
+\
+\
+xxxxxxxxxxxxxxx\
+\
+\
+\pard\pardeftab720\li1920\fi-1920\partightenfactor0
+
+\f1\fs29\fsmilli14667 \cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \outl0\strokewidth0 \strokec3 export LIBRARY_PATH=/usr/local/lib/
+\f2\fs24 \
+
+\f1\fs29\fsmilli14667 export LD_LIBRARY_PATH=/usr/local/lib/cfitsio/lib/\
+\
+Xxxxxxxxxxx\
+\
+\
+https://developer.apple.com/forums/thread/722490\
+\
+Had to turn off anaconda3 by commenting it out in ~/.bash_profile\
+Then launch a terminal window and run ./buildtorus\
+\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs22 \cf2 \kerning1\expnd0\expndtw0 \CocoaLigature0 \outl0\strokewidth0 olin210pa65536:~ schaeferj$ cp .bash_profile-with-anaconda3 .bash_profile\
+\
+iraf acct owns homewbrew - do all homebrew mods using iraf acct.  It\'92s pw is \'91roygbiv\'92\
+\
+\
+\
+xxxxxxxxxxxxxxxxxxxxxxx\
+\
+History of build as user \'91iraf\'92:\
+\
+  290  cd /usr/local/src\
+  291  ls -l\
+  292  cd cfitsio-4.2.0/\
+  293  ls -l\
+  294  pwd\
+  295  whoami\
+  296  ./configure\
+  297  make\
+  298  make install\
+  299  ./configure --prefix=/usr/local/\
+  300  make\
+  301  pwd\
+  302  make install\
+  303  ls -l /usr/local/lib/libcfitsio.*\
+  304  whoami\
+  305  printevn | grep -i torus\
+  306  printenv | grep -i torus\
+  307  cd torus\
+  308  pwd\
+  309  whoami\
+  310  ls /Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/lib/libz.tbd\
+  311  less /Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/lib/libz.tbd\
+  312  pwd\
+  313  whoami\
+  314  cd\
+  315  whoami\
+  316  cd ~iraf\
+  317  pwd\
+  318  ls -l\
+  319  ls /opt/homebrew\
+  320  which brew\
+  321  lcd /usr/local\
+  322  cd /usr/local/\
+  323  find . -ls | grep -i homebrew\
+  324  ls ./Homebrew/\
+  325  pwd\
+  326  sudo su -\
+  327  cd\
+  328  cd\
+  329  pwd\
+  330  history \
+bash-3.2$ \
+\
+
+\f2\fs24 \cf0 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \outl0\strokewidth0 \strokec3 \
+}
