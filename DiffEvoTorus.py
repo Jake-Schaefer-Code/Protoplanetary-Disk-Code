@@ -26,17 +26,47 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         # Creates new Parameters file
         originalParams = open(baseDir + '/modParameters.dat', 'r').read()
         lines = originalParams.splitlines()
+        lineDict, outputLines = {}, []
         f = open(runFolder + '/modParameters' + num2 + '.dat', 'w') # New param file numbered to run
         for line in lines:
             line = line.split(' ')
             varName = line[0]
             if varName in varNames:
                 index = varNames.index(varName)
-                newVal = str(params[index])
+                newVal = params[index]
                 line = replaceValue(line, 1, newVal)
+            lineDict[varName] = line
+            outputLines += [line]
+            
+        rPrev, rCur, hPrev = 100, lineDict["rinnermod1"][1], 10
+        betamod = lineDict["betamod1"][1]
+        for line in outputLines:
+            varName = line[0]
+            if "alphamod" in varName:
+                newVal = float(lineDict["alphamod1"][1])
+                line = replaceValue(line, 1, str(newVal))
+            if "betamod" in varName:
+                newVal = betamod
+                line = replaceValue(line, 1, str(newVal))
+            if "heightmod" in varName:
+                newVal = hPrev * ((rCur/rPrev) ** betamod)
+                line = replaceValue(line, 1, str(newVal))
+                hPrev = newVal
+                modNum = int(varName[-1])
+                if modNum < 5:
+                    rPrev = float(lineDict["rinnermod" + str(modNum)][1])
+                    rCur = float(lineDict["rinnermod" + str(modNum + 1)][1])
+            if "settleheight" in varName:
+                if varName[-1] == "1":
+                    newVal = 0.7*hPrev
+                else:
+                    newVal = 0.1*hPrev
+                line = replaceValue(line, 1, str(newVal))
+            
             outputLine = ""
             for item in line:
                 outputLine += str(item) + ' '
+            print(outputLine)
             f.write(outputLine + '\n' )
         f.close()
 
@@ -124,139 +154,129 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
     return varNames, y, np.min(fx) # Returns variable names, vector with lowest chi value, and lowest chi value
 
 def findChi(modelPath, dataPath):
-    """
-    Calculates the chi squared value for two sets of data.
-    """
-    
+
     modelFile = open(modelPath, 'r')
     modelText = modelFile.read()
     modelLines = modelText.splitlines()
-    
+
     dataFile = open(dataPath, "r")
     dataText = dataFile.read()
     dataLines = dataText.splitlines()
 
-    dataLines = dataLines[3:]
     modelDataLines = modelLines[1:]
-    
+    dataLines = dataLines[3:]
+
+    modelLam = []
+    modelFlux = [] 
+
     dataLam = []
     dataFlux = []
     error = []
-    
-    modelLam = []
-    modelFlux = [] 
+
+
+    def getLine(point1, point2):
+        return (point1, (point2[1]-point1[1])/(point2[0]-point1[0]))
+
+    def findIntercept(modelPoint, line):
+        x = modelPoint[0]
+        y = line[1]*(x-line[0][0]) + line[0][1]
+        return (x, y)
 
     for i in range(len(modelDataLines)): # intentionally discarding the second and third columns because flux is 0
         valueslist2 = modelDataLines[i].split("     ")
         modelLam.append(float(valueslist2[1]))
         modelFlux.append(float(valueslist2[2]))
-    
+
     for i in range(len(dataLines)):
         valueslist = dataLines[i].split(" ")
-        if valueslist[3] != 'nan' and float(valueslist[3]) != 0:
+        if valueslist[3] != 'nan' and float(valueslist[3]) != 0 and float(valueslist[0])*10**6 != 4.35:
             dataLam.append(float(valueslist[0])*10**6)
             dataFlux.append(float(valueslist[2]))
             error.append(float(valueslist[3]))
-    
-    listofranges = []
-
-    xyerrTuples = []
-
-    modelTuples = []
-
-    for i in range(len(dataLam)):
-        xyerrTuples.append((dataLam[i],dataFlux[i], error[i]))
-
-    for i in range(len(modelLam)):
-        modelTuples.append((modelLam[i], modelFlux[i]))
-
-    xyerrTuples.sort()
-
-    # now we have a list of x, y, and error values sorted by x
-    # and a list of the x and y values of the model
-
-    for j in range(len(xyerrTuples)):
-
-        if j == 0:
-            xmin = 0
-        else:
-            xmin = (xyerrTuples[j][0] + xyerrTuples[j-1][0])/2
-
-        if j == len(xyerrTuples)-1:
-            xmax = xyerrTuples[j][0]
-        else:
-            xmax = (xyerrTuples[j+1][0] + xyerrTuples[j][0])/2
-
-        listofranges.append((xmin, xmax, j))
-
-
-    # Everything that happens in this dictOfBins business is something of a relic. I
-    # made it early in the process when I was calculating chi2 based on the average value
-    # of the model points closest to a data point. That is not the best way to calculate chi2!
-    # This system finds the two model points on either side of a data point, averages their 
-    # values, and calculates chi2 from that. The system still works fine and I don't want to 
-    # break it, and it has the neat upside of binning all the model points according to the data,
-    # which could be useful later. It also helpfully filters all the data points that are better
-    # matched with other model points.
-
-    dictOfBins = {}
-
-    for entry in modelTuples:
-        for i in range(len(listofranges)):
-            valuerange = listofranges[i]
-            if valuerange[0] < entry[0] and valuerange[1] >= entry[0]: # if x-value is within the bin
-                if dictOfBins.get(valuerange) == None:
-                    dictOfBins[valuerange] = [(entry, valuerange[2])]
-                else:
-                    dictOfBins[valuerange].append((entry, valuerange[2]))
-    chi2 = 0
-
-    for valuerange in dictOfBins:
-
-        valuesInBin = dictOfBins[valuerange] # nested tuple of ((x, y) for model points, index of data point)
-
-        index = valuesInBin[0][1]
-
-        expectedX = xyerrTuples[index][0]
-        expectedY = xyerrTuples[index][1]
-
-        if len(valuesInBin) == 1:
-            modelValue = valuesInBin[0][0][1]
-            wavelength = valuesInBin[0][0][0]  # useful for figuring out how the model matches up
-        else:
-            lower = 0
-            upper = 10000
-            for i in range(len(valuesInBin)):  # this takes a bin, starts at the lowest and highest values, and narrows in on the data point
-                xpos = valuesInBin[i][0][0]
-                ypos = valuesInBin[i][0][1]
-                ymin = 0
-                ymax = 0
-                if xpos < expectedX and xpos > lower:
-                    lower = xpos
-                    ymin = ypos
-                elif xpos >= expectedX and xpos < upper:
-                    upper = xpos
-                    ymax = ypos
-
-            if lower == 0:
-                modelValue = ymax
-                wavelength = upper
-            elif upper == 10000:
-                modelValue = ymin
-                wavelength = lower
-            else:
-                modelValue = (ymin + ymax)/2
-                wavelength = (lower+upper)/2
         
-        errorValue = xyerrTuples[index][2]
+    listOfRanges = []
+    xyerrTuples = [(dataLam[i],dataFlux[i],error[i]) for i in range(len(dataLam))]
+    modelTuples = [(modelLam[i],modelFlux[i]) for i in range(len(modelLam))]
+    fitPts = [[dataLam[i],dataFlux[i],error[i]] for i in range(len(dataLam))]
+    xyerrTuples.sort()
+    fitPts.sort()
+    pointDict = {'x':[], 'y':[]}
+    modelPointDict = {'x':[], 'y':[]}
 
-        d_chi2 = (modelValue - expectedY)**2 / errorValue**2 # standard chi2 calculation with error
-#         print('Wavelength: ', wavelength)
-#         print('d_chi: ', d_chi2)
-#         print()
-        chi2 += d_chi2
-    
-    return chi2
+    for tuple in xyerrTuples:
+        pointDict['x'] += [tuple[0]]
+        pointDict['y'] += [tuple[1]]
+
+    for tuple in modelTuples:
+        modelPointDict['x'] += [tuple[0]]
+        modelPointDict['y'] += [tuple[1]]
+
+    count = 0
+    for j in range(len(xyerrTuples)-1):
+        if xyerrTuples[j][0] == xyerrTuples[j+1][0]:
+            fitPts[count][1] = (xyerrTuples[j][1] + xyerrTuples[j+1][1])/2
+            fitPts[count][2] = (xyerrTuples[j][2] + xyerrTuples[j+1][2])/2
+            fitPts.pop(count+1)
+        else:
+            xmin = xyerrTuples[j][0]
+            xmax = xyerrTuples[j+1][0]
+            listOfRanges.append((xmin, xmax, count))
+            count += 1
+
+
+    dictOfBins = {"nearIr":{ranges:[] for ranges in listOfRanges[:14]}, "midIr":{ranges:[] for ranges in listOfRanges[14:25]}, 
+                    "farIr":{ranges:[] for ranges in listOfRanges[25:31]}, "micro":{ranges:[] for ranges in listOfRanges[31:]}}
+
+
+    count = 0
+    for point in modelTuples:
+        for i in range(len(listOfRanges)):
+            valuerange = listOfRanges[i]
+            if valuerange[0] < point[0] and valuerange[1] >= point[0]:
+                if i < 14: # If the point lies in the nearIR spectrum
+                    dictOfBins["nearIr"][valuerange] += [(point, valuerange[2])] #point and index
+                elif 14 <= i and i < 25: 
+                    dictOfBins["midIr"][valuerange] += [(point, valuerange[2])]
+                elif 25 <= i and i < 31:
+                    dictOfBins["farIr"][valuerange] += [(point, valuerange[2])]
+                else:
+                    dictOfBins["micro"][valuerange] += [(point, valuerange[2])]
+
+    nearIrChi = 0
+    midIrChi = 0
+    farIrChi = 0
+    microChi = 0
+
+    for irBin in dictOfBins:
+        for valuerange in dictOfBins[irBin]:
+            valuesInBin = dictOfBins[irBin][valuerange]
+            binIndex = valuerange[2]
+            binPoint1 = (fitPts[binIndex][0],fitPts[binIndex][1])
+            binPoint2 = (fitPts[binIndex + 1][0],fitPts[binIndex + 1][1])
+            for value in dictOfBins[irBin][valuerange]:
+                modelPoint = value[0]
+                binLine = getLine(binPoint1, binPoint2)
+                expPoint = findIntercept(modelPoint, binLine)
+                errorValue = fitPts[binIndex][2]
+                variance = (modelPoint[1]-errorValue)**2
+                d_chi = (modelPoint[1]-expPoint[1])**2 / expPoint[1] **2
+                if irBin == "nearIr":
+                    nearIrChi += d_chi
+                elif irBin == "midIr":
+                    midIrChi += d_chi
+                elif irBin == "farIr":
+                    farIrChi += d_chi
+                else:
+                    microChi += d_chi
+
+    nearIrChi = (nearIrChi * len(listOfRanges)) / len(listOfRanges[:14])
+    midIrChi = (midIrChi * len(listOfRanges)) / len(listOfRanges[14:25])
+    farIrChi = (farIrChi * len(listOfRanges)) / len(listOfRanges[25:31])
+    microChi = (microChi * len(listOfRanges)) / len(listOfRanges[31:])
+    totalChi = nearIrChi + midIrChi + farIrChi + microChi
+
+    return totalChi
+
 
 def main():
     result = differential_evolution(False)
