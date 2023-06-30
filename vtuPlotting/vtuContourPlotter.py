@@ -129,12 +129,14 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
 
     import matplotlib.pyplot as plt
 
-    fig = plt.figure(figsize=(18,12))
+    fig = plt.figure(figsize=(18, 4 * len(variableNames)))
     subfigs = fig.subfigures(len(variableNames),1) # one subfig for each variable
+    if len(variableNames) == 1: # if only one variable, makes a single subfig instead of a list
+        subfigs = [subfigs]
     for i in range(len(subfigs)):
 
         variable = variableNames[i]
-        (ax1, ax2, ax3) = subfigs[i].subplots(1, len(variableNames))
+        (ax1, ax2, ax3) = subfigs[i].subplots(1, 3) #len(variableNames)
         plt.set_cmap('viridis')
         if variable == 'temperature': # some colormaps I like. Not necessary and other variables will just be in the default colormap.
             plt.set_cmap('inferno')
@@ -176,7 +178,12 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
         subfigs[i].supxlabel('Radial distance (AU)',  fontsize = 'x-large', y=0)
         subfigs[i].supylabel('Polar distance (AU)',  fontsize = 'x-large', x = 0.09)
     plt.subplots_adjust(bottom=0.15, right = 0.77)
-    plt.savefig(directory + '.png')
+
+    if directory == '':
+        plt.savefig(filename.split('.')[0] + '.png')
+    else:
+        plt.savefig(directory + '.png') # adjust for personal preference
+
     plt.close() # EAR
 
 
