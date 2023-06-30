@@ -32,6 +32,7 @@ vtuContourPlotter.bigPlot(filename)
     it adds virtually no time, but it is annoying and I would like it to run faster. The module currently renders every image separately, rather than rendering one image
     for each parameter and zooming in. This could likely be solved by setting one ax as the full image, copying it to two other axes, and then setting plt.xlim() for 
     those plots. 
+    I also wind up converting between numpy arrays and lists a few times. This is mostly because I am not wildly familiar with numpy. 
 """
 
 def plot(filename, variable, directory = '', plotsize = 'full'):
@@ -48,6 +49,7 @@ def plot(filename, variable, directory = '', plotsize = 'full'):
     import matplotlib.pyplot as plt
     import numpy as np
 
+
     if directory != '':
         filename = str(directory) + '/' + str(filename)
 
@@ -63,9 +65,9 @@ def plot(filename, variable, directory = '', plotsize = 'full'):
 
     minIndexes = []
     for i in range(len(valArray)): # convert to log values
-        value = valArray.GetValue(i)
+        value = valArray[i] # EAR
         if value > 0: # if value won't throw a log error
-            valArray.SetValue(i, np.log10(value))
+            valArray[i] = np.log10(value) # EAR
         else: # if the value is too small to log, store the index 
             minIndexes.append(i)
 
@@ -76,7 +78,7 @@ def plot(filename, variable, directory = '', plotsize = 'full'):
     
     centers = grid.cell_centers() # plot the center points for the contour
     centerPoints = np.asarray(centers.GetPoints().GetData())
-    scale = 6.685 * (10 ** -4) # convert to AU
+    scale = 6.685 * (10 ** -4)
     centerX = centerPoints[:,0] * scale
     centerY = centerPoints[:,1] * scale
 
@@ -171,11 +173,14 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
             rounded = '%s' % float('%.3g' % actual) # rounding the tick labels to 3 sig figs
             newLabels.append(str(rounded))
         cbar.set_ticks(tickLocs, labels = newLabels)
+        #subfigs[i].suptitle(variable)
         
         subfigs[i].supxlabel('Radial distance (AU)',  fontsize = 'x-large', y=0)
         subfigs[i].supylabel('Polar distance (AU)',  fontsize = 'x-large', x = 0.09)
     plt.subplots_adjust(bottom=0.15, right = 0.77)
-    plt.savefig(directory + '.png')
+    plt.savefig(directory + '.png') # adjust to desired output file name
+    plt.close() # EAR
+
 
 def main():
     """
