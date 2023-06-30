@@ -4,10 +4,12 @@ count = 0
 count2 = 1
 baseDir = "/Users/schaeferj/models" # Base Directory
 torusDir = "/Users/schaeferj/torus/bin/torus.openmp"
+# baseDir = "/home/schaeferj/models"
+# torusDir = "/home/schaeferj/torus/bin/torus.openmp"
 
 def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 10):
-    bounds = np.array([[7500, 10000], [0.5, 1.56], [0.001, 0.02], [0.01, 0.05]]) # Each entry bounds[i,:] = upper, lower bounds of i
-    varNames = ["teff1", "rinnermod1", "grainfrac1", "grainfrac2"] # Variable names corresponding to bound indices
+    bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133]]) # Each entry bounds[i,:] = upper, lower bounds of i
+    varNames = ["alphamod1", "betamod1", "grainfrac1"] # Variable names corresponding to bound indices
     global count, baseDir
     
     def replaceValue(line, index, newVal):
