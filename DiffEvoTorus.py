@@ -1,5 +1,6 @@
 import numpy as np
 import subprocess
+import os
 count = 0
 count2 = 1
 baseDir = "/Users/schaeferj/models" # Base Directory
@@ -22,14 +23,16 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         num2 = str(count2)
         runFolder = baseDir + "/gen" + str(count) + "/run" + num2
         # Creates new directory for the run number
-        subprocess.call(['cd ' + baseDir, '/'], shell=True)
+
+        #subprocess.call(['cd ' + baseDir, '/'], shell=True)
+        os.chdir(baseDir)
         subprocess.call(['mkdir ' + runFolder + '; cd ' + runFolder, '/'], shell=True)
         
         # Creates new Parameters file
         originalParams = open(baseDir + '/modParameters.dat', 'r').read()
         lines = originalParams.splitlines()
         lineDict, outputLines = {}, []
-        f = open(runFolder + '/modParameters' + num2 + '.dat', 'w') # New param file numbered to run
+        f = open(runFolder + '/modParameters.dat', 'w') # New param file numbered to run
         for line in lines:
             line = line.split(' ')
             varName = line[0]
@@ -73,9 +76,11 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         f.close()
 
         # Runs TORUS and waits
-        process = subprocess.Popen([torusDir, runFolder + '/modParameters' + num2 + '.dat'])
+        os.chdir(runFolder)
+        os.system("sh execute.sh")
+        """process = subprocess.Popen([torusDir, runFolder + '/modParameters.dat'])
         process.communicate()
-        process.wait()
+        process.wait()"""
         
         # Finds Chi Square and writes it in a file
         sed = baseDir + '/sed_inc042.dat'
@@ -92,9 +97,10 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         # Unnecessary, but prints completed message
         completeStr = "Run " + num2 + " Complete"
         decor = "%"*len(completeStr)
-        subprocess.call(["cd ..; echo " + decor, '/'], shell=True)
+        #os.chdir("../")
+        subprocess.call(["echo " + decor, '/'], shell=True)
         subprocess.call(["echo  Run " + num2 + " Complete", '/'], shell=True)
-        subprocess.call(["cd ..; echo " + decor, '/'], shell=True)
+        subprocess.call(["echo " + decor, '/'], shell=True)
 
         count2+=1
         return chi
@@ -105,8 +111,10 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
                 return True
         return False
 
-    subprocess.call(['cd ' + baseDir, '/'], shell=True)
-    subprocess.call(['mkdir gen' + str(count) + '; cd ' + baseDir + '/gen' + str(count), '/'], shell=True)
+    #subprocess.call(['cd ' + baseDir, '/'], shell=True)
+    os.chdir(baseDir)
+    subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
+    os.chdir(baseDir + '/gen' + str(count))
     N,K = bounds.shape[0]*popSize, bounds.shape[0]
     x = np.random.rand(N, K) # initial (normed) population array with random values
     bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
@@ -116,8 +124,9 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
 
     while not converged(x, fx):
         # Creates folder for the new generation
-        subprocess.call(['cd ' + baseDir, '/'], shell=True)
-        subprocess.call(['mkdir gen' + str(count) + '; cd ' + baseDir + '/gen' + str(count), '/'], shell=True)
+        os.chdir(baseDir)
+        subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
+        os.chdir(baseDir + '/gen' + str(count))
 
         if type(mutation) == tuple:
             m = np.random.uniform(*mutation) # If want m to be random multiple value each generation
