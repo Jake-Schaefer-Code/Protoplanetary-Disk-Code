@@ -43,8 +43,8 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             lineDict[varName] = line
             outputLines += [line]
             
-        rPrev, rCur, hPrev = 100, lineDict["rinnermod1"][1], 10
-        betamod = lineDict["betamod1"][1]
+        rPrev, rCur, hPrev = 100.0, float(lineDict["rinnermod1"][1]), 10.0
+        betamod = float(lineDict["betamod1"][1])
         for line in outputLines:
             varName = line[0]
             if "alphamod" in varName:
@@ -67,6 +67,8 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
                 else:
                     newVal = 0.1*hPrev
                 line = replaceValue(line, 1, str(newVal))
+            if "settlebeta" in varName:
+             	newVal = betamod
             
             outputLine = ""
             for item in line:
@@ -76,8 +78,8 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         f.close()
 
         # Runs TORUS and waits
-        os.chdir(runFolder)
-        os.system("sh execute.sh")
+        os.chdir(baseDir) # Change maybe?
+        os.system("sh /Users/schaeferj/Desktop/execute.sh")
         """process = subprocess.Popen([torusDir, runFolder + '/modParameters.dat'])
         process.communicate()
         process.wait()"""
