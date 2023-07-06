@@ -68,8 +68,9 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
                     newVal = 0.1*hPrev
                 line = replaceValue(line, 1, str(newVal))
             if "settlebeta" in varName:
-             	newVal = betamod
-            
+                newVal = betamod
+                line = replaceValue(line, 1, str(newVal))
+        
             outputLine = ""
             for item in line:
                 outputLine += str(item) + ' '
