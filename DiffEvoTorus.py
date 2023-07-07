@@ -74,7 +74,7 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             outputLine = ""
             for item in line:
                 outputLine += str(item) + ' '
-            print(outputLine)
+            #print(outputLine)
             f.write(outputLine + '\n' )
         f.close()
 
@@ -106,11 +106,12 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         subprocess.call(["echo " + decor, '/'], shell=True)
 
         count2+=1
+        print("Run " + num2 + ": " + chi)
         return chi
     
     def converged(curPop, fit):
         for chi in fit:
-            if chi <= 150000: # TODO: CHANGE TO REASONABLE VALUE
+            if chi <= 100: # TODO: CHANGE TO REASONABLE VALUE
                 return True
         return False
 
@@ -148,7 +149,8 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         improved = fxtrial < fx # Array of booleans indicating which trial members were improvements
         x[improved], fx[improved] = xtrial[improved], fxtrial[improved] # Replaces values in population with improved ones
         y = x[np.argmin(fx)]*brange+bmin # Gets the vector from x with lowest chi value, mult by range and added to min
-
+		#print(y)
+		
         # Code to save the population of x as a csv file
         F = open(baseDir + "/gen" + str(count) + "/result" + str(count) + ".dat", "w")
         F.write(",".join(varNames)+",ChiValue\n")
