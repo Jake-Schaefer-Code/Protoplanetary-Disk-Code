@@ -22,9 +22,8 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         global count, count2, torusDir, baseDir
         num2 = str(count2)
         runFolder = baseDir + "/gen" + str(count) + "/run" + num2
-        # Creates new directory for the run number
-
-        #subprocess.call(['cd ' + baseDir, '/'], shell=True)
+        
+        # Creates new directory for the run number 
         os.chdir(baseDir)
         subprocess.call(['mkdir ' + runFolder + '; cd ' + runFolder, '/'], shell=True)
         
@@ -79,11 +78,8 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         f.close()
 
         # Runs TORUS and waits
-        os.chdir(baseDir) # Change maybe?
+        os.chdir(baseDir)
         os.system("sh /Users/schaeferj/Desktop/execute.sh")
-        """process = subprocess.Popen([torusDir, runFolder + '/modParameters.dat'])
-        process.communicate()
-        process.wait()"""
         
         # Finds Chi Square and writes it in a file
         sed = baseDir + '/sed_inc042.dat'
@@ -104,9 +100,9 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         subprocess.call(["echo " + decor, '/'], shell=True)
         subprocess.call(["echo  Run " + num2 + " Complete", '/'], shell=True)
         subprocess.call(["echo " + decor, '/'], shell=True)
+        print("Run " + num2 + ": " + chi)
 
         count2+=1
-        print("Run " + num2 + ": " + chi)
         return chi
     
     def converged(curPop, fit):
@@ -115,12 +111,18 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
                 return True
         return False
 
-    #subprocess.call(['cd ' + baseDir, '/'], shell=True)
+
     os.chdir(baseDir)
     subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
     os.chdir(baseDir + '/gen' + str(count))
     N,K = bounds.shape[0]*popSize, bounds.shape[0]
     x = np.random.rand(N, K) # initial (normed) population array with random values
+    """ xtrial = np.zeros_like(x)
+        j = (best - bmin)/brange # Can use this instead of random if restarted
+        for i in indices:
+            k,l = np.random.choice(indices[np.isin(indices, [i,j], invert=True)], 2) # Chooses 2 random vectors that are not xbest or xi
+            xmi = np.clip(x[j] + 0.7*(x[k]-x[l]),0,1) # Creates mutated xi vector: xbest + mutant vector
+            xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i])"""
     bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
     fx = np.array([objective_fn(xi) for xi in x*brange+bmin]) # Fit metrics: the chi square value for each population member
     indices = np.arange(N)
