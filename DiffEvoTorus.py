@@ -4,37 +4,53 @@ import os
 import pyvista as pv
 import matplotlib.pyplot as plt
 
-count = 0
-count2 = 1
+count, count2 = 0, 1
 baseDir = "/Users/schaeferj/models" # Base Directory
 torusDir = "/Users/schaeferj/torus/bin/torus.openmp"
 # baseDir = "/home/schaeferj/models"
 # torusDir = "/home/schaeferj/torus/bin/torus.openmp"
 
 def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 10):
-    bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133]]) # Each entry bounds[i,:] = upper, lower bounds of i
-    varNames = ["alphamod1", "betamod1", "grainfrac1"] # Variable names corresponding to bound indices
     global count, baseDir
+
+    # Each entry bounds[i,:] = upper, lower bounds of i
+    bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133]])
+
+    # Variable names corresponding to bound indices
+    varNames = ["alphamod1", "betamod1", "grainfrac1"] 
     
+    # Code to update value in parameters file
     def replaceValue(line, index, newVal):
         first = line[:index]
         second = line[index+1:]
         return first + [newVal] + second
+    
+    # Checks if objective function value is low enough to stop
+    def converged(fit):
+        for chi in fit:
+            if chi <= 100:
+                return True
+        return False
 
     def objective_fn(params):
         global count, count2, torusDir, baseDir
         num2 = str(count2)
+        
+        # Creates new directory that will contain data from the current run
         runFolder = baseDir + "/gen" + str(count) + "/run" + num2
-        
-        # Creates new directory for the run number 
         os.chdir(baseDir)
-        subprocess.call(['mkdir ' + runFolder + '; cd ' + runFolder, '/'], shell=True)
-        
-        # Creates new Parameters file
-        originalParams = open(baseDir + '/modParameters.dat', 'r').read()
-        lines = originalParams.splitlines()
+        os.mkdir(runFolder)
+        # TODO: remove this: subprocess.call(['mkdir ' + runFolder + '; cd ' + runFolder, '/'], shell=True)
+
+        # Opens base parameters file
+        baseParams = open(baseDir + '/modParameters.dat', 'r').read()
+        lines = baseParams.splitlines()
         lineDict, outputLines = {}, []
-        f = open(runFolder + '/modParameters.dat', 'w') # New param file numbered to run
+
+        # Creates new parameters file
+        newParams = open(runFolder + '/modParameters.dat', 'w')
+
+        # First updates the variables being iterated
         for line in lines:
             line = line.split(' ')
             varName = line[0]
@@ -45,42 +61,42 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             lineDict[varName] = line
             outputLines += [line]
             
-        rPrev, rCur, hPrev = 100.0, float(lineDict["rinnermod1"][1]), 10.0
+        rPrev, hPrev = 100.0, 10.0
+        rCur = float(lineDict["rinnermod1"][1])
         betamod = float(lineDict["betamod1"][1])
+        alphamod = float(lineDict["alphamod1"][1])
+
+        # Edits parameters dependent on each other
         for line in outputLines:
             varName = line[0]
-            if "alphamod" in varName:
-                newVal = float(lineDict["alphamod1"][1])
-                line = replaceValue(line, 1, str(newVal))
-            if "betamod" in varName:
-                newVal = betamod
-                line = replaceValue(line, 1, str(newVal))
             if "heightmod" in varName:
                 newVal = hPrev * ((rCur/rPrev) ** betamod)
-                line = replaceValue(line, 1, str(newVal))
                 hPrev = newVal
                 modNum = int(varName[-1])
                 if modNum < 5:
                     rPrev = float(lineDict["rinnermod" + str(modNum)][1])
                     rCur = float(lineDict["rinnermod" + str(modNum + 1)][1])
-            if "settleheight" in varName:
+            elif "alphamod" in varName:
+                newVal = alphamod
+            elif "betamod" or "settlebeta" in varName:
+                newVal = betamod
+            elif "settleheight" in varName:
                 if varName[-1] == "1":
                     newVal = 0.7*hPrev
                 else:
                     newVal = 0.1*hPrev
-                line = replaceValue(line, 1, str(newVal))
-            if "settlebeta" in varName:
-                newVal = betamod
-                line = replaceValue(line, 1, str(newVal))
-        
+            else:
+                newVal = line[1]
+            
+            # Updates the line
+            line = replaceValue(line, 1, str(newVal))
             outputLine = ""
             for item in line:
                 outputLine += str(item) + ' '
-            #print(outputLine)
-            f.write(outputLine + '\n' )
-        f.close()
+            newParams.write(outputLine + '\n' )
+        newParams.close()
 
-        # Runs TORUS and waits
+        # Runs Torus and waits
         os.chdir(baseDir)
         os.system("sh /Users/schaeferj/Desktop/execute.sh")
         
@@ -95,42 +111,35 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         total_dir_list = os.listdir(baseDir)
         lucy_list = []
         for file in total_dir_list:
-            if str(file)[:4] == 'lucy' and str(file)[-4:] == '.vtu': # torus produces some lucy.dat files and other .vtu files, so this pulls out the lucy .vtu files
+            # Torus produces some lucy.dat files and other .vtu files, 
+            # so this pulls out the lucy .vtu files
+            if str(file)[:4] == 'lucy' and str(file)[-4:] == '.vtu': 
                 lucy_list.append(file)
         
         maxLucy, maxFile = 0, None
         for file in lucy_list:
-            lucyNum = int(str(file.split('_')[1])[:-4]) # pulling out the number between lucy_ and .vtu
-            if lucyNum > maxLucy: # iterate to get the latest lucy file
+            lucyNum = int(str(file.split('_')[1])[:-4]) # Pulls out number between lucy_ and .vtu
+            if lucyNum > maxLucy: # Gets latest lucy iteration
                 maxLucy = lucyNum
                 maxFile = file
 
-        if maxFile != None: # only plot if there is a lucy file
+        # Only plot if there is a lucy file
+        if maxFile != None: 
             bigPlot(maxFile, baseDir)
 
-        # Moves the SED, Lucy, and Convergence files into run folder to save them
+        # Moves the SED, Convergence, Lucy, and plotted vtu files into run folder to save them
         subprocess.call(["mv "+ baseDir + "/sed_inc042.dat " + runFolder, '/'], shell=True)
-        subprocess.call(["mv "+ baseDir + "/lucy_000004001.vtu " + runFolder, '/'], shell=True)
+        subprocess.call(["mv "+ baseDir + "/" + maxFile + " " + runFolder, '/'], shell=True)
         subprocess.call(["mv " + baseDir + "/convergence_lucy.dat " + runFolder, '/'], shell=True)
         subprocess.call(["mv "+ baseDir + "/lucyvtu.png " + runFolder, '/'], shell=True)
 
         # Unnecessary, but prints completed message
-        completeStr = "Run " + num2 + " Complete"
+        completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
         decor = "%"*len(completeStr)
-        #os.chdir("../")
-        subprocess.call(["echo " + decor, '/'], shell=True)
-        subprocess.call(["echo  Run " + num2 + " Complete", '/'], shell=True)
-        subprocess.call(["echo " + decor, '/'], shell=True)
-        print("Run " + num2 + ": " + chi)
+        os.system("echo " + decor + "$'\n'" + completeStr + "$'\n'" + decor)
 
         count2+=1
         return chi
-    
-    def converged(curPop, fit):
-        for chi in fit:
-            if chi <= 100: # TODO: CHANGE TO REASONABLE VALUE
-                return True
-        return False
 
 
     os.chdir(baseDir)
@@ -145,11 +154,13 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             xmi = np.clip(x[j] + 0.7*(x[k]-x[l]),0,1) # Creates mutated xi vector: xbest + mutant vector
             xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i])"""
     bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
-    fx = np.array([objective_fn(xi) for xi in x*brange+bmin]) # Fit metrics: the chi square value for each population member
+
+    # Fit metrics: the chi square value for each population member
+    fx = np.array([objective_fn(xi) for xi in x*brange+bmin])
     indices = np.arange(N)
     count+=1
 
-    while not converged(x, fx):
+    while not converged(fx):
         # Creates folder for the new generation
         os.chdir(baseDir)
         subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
@@ -422,10 +433,6 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
         plt.savefig('lucyvtu.png') # adjust for personal preference"""
 
     plt.close() # EAR
-
-
-
-
 
 def main():
     result = differential_evolution(False)
