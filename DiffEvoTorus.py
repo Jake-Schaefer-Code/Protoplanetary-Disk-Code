@@ -39,7 +39,7 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         # Creates new directory that will contain data from the current run
         runFolder = baseDir + "/gen" + str(count) + "/run" + num2
         os.chdir(baseDir)
-        subprocess.call(['mkdir ' + runFolder + '; cd ' + runFolder, '/'], shell=True) # WORK
+        subprocess.call(['mkdir ' + runFolder + '; cd ' + runFolder, '/'], shell=True)
 
         # Opens base parameters file
         baseParams = open(baseDir + '/modParameters.dat', 'r').read()
@@ -96,18 +96,18 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         newParams.close()
 
         # Runs Torus and waits
-        os.chdir(baseDir)
+        os.chdir(runFolder)
         os.system("sh /Users/schaeferj/Desktop/execute.sh")
         
         # Finds Chi Square and writes it in a file
-        sed = baseDir + '/sed_inc042.dat'
+        sed = runFolder + '/sed_inc042.dat'
         chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
         f = open(runFolder + '/chi' + num2 + '.dat', 'w')
         f.write(str(chi))
         f.close()
 
 
-        total_dir_list = os.listdir(baseDir)
+        total_dir_list = os.listdir(runFolder)
         lucy_list = []
         for file in total_dir_list:
             # Torus produces some lucy.dat files and other .vtu files, 
@@ -124,18 +124,20 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
 
         # Only plot if there is a lucy file
         if maxFile != None: 
-            bigPlot(maxFile, baseDir)
+            bigPlot(maxFile, runFolder)
 
         # Moves the SED, Convergence, Lucy, and plotted vtu files into run folder to save them
-        subprocess.call(["mv "+ baseDir + "/sed_inc042.dat " + runFolder, '/'], shell=True)
+        """subprocess.call(["mv "+ baseDir + "/sed_inc042.dat " + runFolder, '/'], shell=True)
         subprocess.call(["mv "+ baseDir + "/" + maxFile + " " + runFolder, '/'], shell=True)
         subprocess.call(["mv " + baseDir + "/convergence_lucy.dat " + runFolder, '/'], shell=True)
-        subprocess.call(["mv "+ baseDir + "/lucyvtu.png " + runFolder, '/'], shell=True)
+        subprocess.call(["mv "+ baseDir + "/lucyvtu.png " + runFolder, '/'], shell=True)"""
+        subprocess.call(["rm " + runFolder + "lucy*.dat", '/'], shell=True)
 
         # Unnecessary, but prints completed message
         completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
         decor = "%"*len(completeStr)
         os.system("echo " + decor + "$'\n'" + completeStr + "$'\n'" + decor)
+        os.chdir(baseDir)
 
         count2+=1
         return chi
