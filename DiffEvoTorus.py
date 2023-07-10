@@ -70,6 +70,7 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             varName = line[0]
             if "heightmod" in varName:
                 newVal = hPrev * ((rCur/rPrev) ** betamod)
+                line = replaceValue(line, 1, str(newVal))
                 hPrev = newVal
                 modNum = int(varName[-1])
                 if modNum < 5:
@@ -77,18 +78,25 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
                     rCur = float(lineDict["rinnermod" + str(modNum + 1)][1])
             elif "alphamod" in varName:
                 newVal = alphamod
-            elif "betamod" or "settlebeta" in varName:
+                line = replaceValue(line, 1, str(newVal))
+            elif "betamod" in varName:
                 newVal = betamod
+                print(varName, str(newVal))
+                line = replaceValue(line, 1, str(newVal))
+            elif "settlebeta" in varName:
+                newVal = betamod
+                print(varName, str(newVal))
+                line = replaceValue(line, 1, str(newVal))
             elif "settleheight" in varName:
                 if varName[-1] == "1":
                     newVal = 0.7*hPrev
+                    line = replaceValue(line, 1, str(newVal))
                 else:
                     newVal = 0.1*hPrev
-            else:
-                newVal = line[1]
-            
+                    line = replaceValue(line, 1, str(newVal))
+            #print(varName, str(newVal))
             # Updates the line
-            line = replaceValue(line, 1, str(newVal))
+            #line = replaceValue(line, 1, str(newVal))
             outputLine = ""
             for item in line:
                 outputLine += str(item) + ' '
