@@ -81,22 +81,17 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
                 line = replaceValue(line, 1, str(newVal))
             elif "betamod" in varName:
                 newVal = betamod
-                print(varName, str(newVal))
                 line = replaceValue(line, 1, str(newVal))
             elif "settlebeta" in varName:
                 newVal = betamod
-                print(varName, str(newVal))
                 line = replaceValue(line, 1, str(newVal))
             elif "settleheight" in varName:
                 if varName[-1] == "1":
                     newVal = 0.7*hPrev
-                    line = replaceValue(line, 1, str(newVal))
                 else:
                     newVal = 0.1*hPrev
-                    line = replaceValue(line, 1, str(newVal))
-            #print(varName, str(newVal))
-            # Updates the line
-            #line = replaceValue(line, 1, str(newVal))
+                line = replaceValue(line, 1, str(newVal))
+
             outputLine = ""
             for item in line:
                 outputLine += str(item) + ' '
@@ -135,10 +130,6 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             bigPlot(maxFile, runFolder)
 
         # Moves the SED, Convergence, Lucy, and plotted vtu files into run folder to save them
-        """subprocess.call(["mv "+ baseDir + "/sed_inc042.dat " + runFolder, '/'], shell=True)
-        subprocess.call(["mv "+ baseDir + "/" + maxFile + " " + runFolder, '/'], shell=True)
-        subprocess.call(["mv " + baseDir + "/convergence_lucy.dat " + runFolder, '/'], shell=True)
-        subprocess.call(["mv "+ baseDir + "/lucyvtu.png " + runFolder, '/'], shell=True)"""
         subprocess.call(["rm " + runFolder + "lucy*.dat", '/'], shell=True)
 
         # Unnecessary, but prints completed message
