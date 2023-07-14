@@ -5,16 +5,16 @@ import pyvista as pv
 import matplotlib.pyplot as plt
 
 count, count2 = 0, 1
-baseDir = "/Users/schaeferj/models" # Base Directory
-torusDir = "/Users/schaeferj/torus/bin/torus.openmp"
-# baseDir = "/home/schaeferj/models"
-# torusDir = "/home/schaeferj/torus/bin/torus.openmp"
+# baseDir = "/Users/schaeferj/models" # Base Directory
+# torusDir = "/Users/schaeferj/torus/bin/torus.openmp"
+baseDir = "/home/schaeferj/models"
+torusDir = "/home/schaeferj/torus/bin/torus.openmp"
 
 def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 10):
     global count, baseDir
 
     # Each entry bounds[i,:] = upper, lower bounds of i
-    bounds = np.array([[1.5, 3.0], [1.05, 2.0], [0.00333, 0.0133]])
+    bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133]])
 
     # Variable names corresponding to bound indices
     varNames = ["alphamod1", "betamod1", "grainfrac1"] 
@@ -100,11 +100,16 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
 
         # Runs Torus and waits
         os.chdir(runFolder)
-        os.system("sh /Users/schaeferj/Desktop/execute.sh")
+        os.system("sh /home/schaeferj/Desktop/execute.sh")
         
         # Finds Chi Square and writes it in a file
-        sed = runFolder + '/sed_inc042.dat'
-        chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
+        try: 
+            sed = runFolder + '/sed_inc042.dat'
+            chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
+            completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
+        except:
+            chi = float('inf')
+            completeStr = 'Run ' + num2 + ' Failed. No chi value.'
         f = open(runFolder + '/chi' + num2 + '.dat', 'w')
         f.write(str(chi))
         f.close()
@@ -133,7 +138,7 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         subprocess.call(["rm " + runFolder + "lucy*.dat", '/'], shell=True)
 
         # Unnecessary, but prints completed message
-        completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
+        
         decor = "%"*len(completeStr)
         os.system("echo " + decor + "$'\n'" + completeStr + "$'\n'" + decor)
         os.chdir(baseDir)
@@ -147,17 +152,31 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
     os.chdir(baseDir + '/gen' + str(count))
     N,K = bounds.shape[0]*popSize, bounds.shape[0]
     x = np.random.rand(N, K) # initial (normed) population array with random values
-    """ xtrial = np.zeros_like(x)
-        j = (best - bmin)/brange # Can use this instead of random if restarted
-        for i in indices:
-            k,l = np.random.choice(indices[np.isin(indices, [i,j], invert=True)], 2) # Chooses 2 random vectors that are not xbest or xi
-            xmi = np.clip(x[j] + 0.7*(x[k]-x[l]),0,1) # Creates mutated xi vector: xbest + mutant vector
-            xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i])"""
     bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
+    indices = np.arange(N)
+    
+
+    # For using an array of known best values to start:
+    # Can use this instead of random if program restarted
+    """
+    count+=1
+    fx = np.full_like(x, float('inf')) # Sets a temp array full of max values for obj fn
+    input = np.array([2.3966,1.0823,0.01406]) # Put desired input array
+    xtrial = np.zeros_like(x)
+    best = (input - bmin)/brange 
+    print(input, best)
+    for i in indices:
+        k,l = np.random.choice(indices[np.isin(indices, [i], invert=True)], 2)
+        xmi = np.clip(best + m*(x[k]-x[l]),0,1)
+        print(xmi)
+        xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i])
+    fxtrial = np.array([objective_fn(xi) for xi in xtrial*brange+bmin]) 
+    improved = fxtrial < fx # Array of booleans indicating which trial members were improvements
+    x[improved], fx[improved] = xtrial[improved], fxtrial[improved]"""
+    
 
     # Fit metrics: the chi square value for each population member
     fx = np.array([objective_fn(xi) for xi in x*brange+bmin])
-    indices = np.arange(N)
     count+=1
 
     while not converged(fx):
@@ -183,7 +202,6 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         improved = fxtrial < fx # Array of booleans indicating which trial members were improvements
         x[improved], fx[improved] = xtrial[improved], fxtrial[improved] # Replaces values in population with improved ones
         y = x[np.argmin(fx)]*brange+bmin # Gets the vector from x with lowest chi value, mult by range and added to min
-		#print(y)
 		
         # Code to save the population of x as a csv file
         F = open(baseDir + "/gen" + str(count) + "/result" + str(count) + ".dat", "w")
