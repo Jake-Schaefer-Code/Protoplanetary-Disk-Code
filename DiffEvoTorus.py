@@ -14,10 +14,10 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
     global count, baseDir
 
     # Each entry bounds[i,:] = upper, lower bounds of i
-    bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133]])
+    bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.05], [5.0, 20.0]])
 
     # Variable names corresponding to bound indices
-    varNames = ["alphamod1", "betamod1", "grainfrac1"] 
+    varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"] 
     
     # Code to update value in parameters file
     def replaceValue(line, index, newVal):
@@ -57,10 +57,13 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
                 index = varNames.index(varName)
                 newVal = params[index]
                 line = replaceValue(line, 1, newVal)
-            lineDict[varName] = line
             outputLines += [line]
+            lineDict[varName] = line
             
-        rPrev, hPrev = 100.0, 10.0
+        rPrev = 100.0
+        # hPrev is not an actual paraneter in the file, but it is the height used
+        # to initialize heightmod1
+        hPrev = float(params[varNames.index("hInit")])
         rCur = float(lineDict["rinnermod1"][1])
         betamod = float(lineDict["betamod1"][1])
         alphamod = float(lineDict["alphamod1"][1])
@@ -99,17 +102,29 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         newParams.close()
 
         # Runs Torus and waits
+        os.system("echo $'\n'Run " + num2 + " Started$'\n'")
         os.chdir(runFolder)
         os.system("sh /home/schaeferj/Desktop/execute.sh")
         
         # Finds Chi Square and writes it in a file
+        # This try-except loop should attempt to rerun torus if torus is killed 9
         try: 
+            sed = runFolder + '/sed_inc042.dat'
+            chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
+            completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
+        except:
+            os.system("sh /home/schaeferj/Desktop/execute.sh")
+
+        # If torus is killed again, it will set the chi squared to infinity and not consider
+        # thse parameters
+        try:
             sed = runFolder + '/sed_inc042.dat'
             chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
             completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
         except:
             chi = float('inf')
             completeStr = 'Run ' + num2 + ' Failed. No chi value.'
+
         f = open(runFolder + '/chi' + num2 + '.dat', 'w')
         f.write(str(chi))
         f.close()
@@ -138,7 +153,6 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         subprocess.call(["rm " + runFolder + "lucy*.dat", '/'], shell=True)
 
         # Unnecessary, but prints completed message
-        
         decor = "%"*len(completeStr)
         os.system("echo " + decor + "$'\n'" + completeStr + "$'\n'" + decor)
         os.chdir(baseDir)
