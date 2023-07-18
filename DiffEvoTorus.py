@@ -3,6 +3,7 @@ import subprocess
 import os
 import pyvista as pv
 import matplotlib.pyplot as plt
+import sys
 
 count, count2 = 0, 1
 # baseDir = "/Users/schaeferj/models" # Base Directory
@@ -10,14 +11,14 @@ count, count2 = 0, 1
 baseDir = "/home/schaeferj/models"
 torusDir = "/home/schaeferj/torus/bin/torus.openmp"
 
-def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 10):
-    global count, baseDir
+def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 10, genNum = 0, restarting = False):
+    global count, count2, baseDir
 
     # Each entry bounds[i,:] = upper, lower bounds of i
     bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.05], [5.0, 20.0]])
 
     # Variable names corresponding to bound indices
-    varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"] 
+    varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"]
     
     # Code to update value in parameters file
     def replaceValue(line, index, newVal):
@@ -31,6 +32,8 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             if chi <= 100:
                 return True
         return False
+
+
 
     def objective_fn(params):
         global count, count2, torusDir, baseDir
@@ -160,6 +163,43 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         count2+=1
         return chi
 
+    def restart(population, fx):
+        global count, count2, torusDir, baseDir
+        genDir = baseDir + "/gen" + str(count)
+        pastRuns = os.listdir(genDir)
+        print(pastRuns)
+        i = 0
+        for run in pastRuns:
+            params = population[i]
+            os.chdir(genDir + "/" + str(run))
+            pastParams = open(genDir + "/" + str(run) + "/modParameters.dat", "r").read()
+            lines = pastParams.splitlines()
+            for line in lines:
+                line = line.split(' ')
+                varName = line[0]
+                if varName in varNames:
+                    index = varNames.index(varName)
+                    params[index] = float(line[1])
+                if varName == "heightmod1":
+                    hmod1 = float(line[1])
+                if varName == "rinnermod1":
+                    rmod1 = float(line[1])
+                if varName == "betamod1":
+                    bmod1 = float(line[1])
+            if "hInit" in varNames:
+                index = varNames.index("hInit")
+                params[index] = ((100 * (hmod1 ** (1 / bmod1))) / rmod1) ** bmod1
+            try:
+                chiVal = open(genDir + "/" + str(run) + '/chi' + str(i + 1) + '.dat', "r").read()
+                chiVal = chiVal.splitlines()
+                chiVal = float(chiVal[0])
+            except:
+                chiVal = float('inf')
+            fx[i] = chiVal
+            print(population[i], fx[i])
+            os.chdir(genDir)
+            i+=1
+        return i        
 
     os.chdir(baseDir)
     subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
@@ -168,7 +208,18 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
     x = np.random.rand(N, K) # initial (normed) population array with random values
     bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
     indices = np.arange(N)
-    
+    fx = np.full(N, float('inf'))
+
+    if restarting:
+        x = x*brange + bmin
+        count += genNum
+        count2 += restart(x, fx)
+        x = (x - bmin)/brange
+        fx[count2-1:] = np.array([objective_fn(xi) for xi in x*brange+bmin[count2-1:]])
+    else:
+        fx = np.array([objective_fn(xi) for xi in x*brange+bmin])
+
+
 
     # For using an array of known best values to start:
     # Can use this instead of random if program restarted
@@ -190,7 +241,6 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
     
 
     # Fit metrics: the chi square value for each population member
-    fx = np.array([objective_fn(xi) for xi in x*brange+bmin])
     count+=1
 
     while not converged(fx):
@@ -467,7 +517,13 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
     plt.close() # EAR
 
 def main():
-    result = differential_evolution(False)
+    try:
+        genNum = int(sys.argv[1])
+        restarting = bool(sys.argv[2])
+        print(genNum, restarting)
+        result = differential_evolution(False, (0.5,1.0), 0.7, 10, genNum, restarting)
+    except:
+        result = differential_evolution(False)
     print(result)
 
 if __name__ == '__main__':
