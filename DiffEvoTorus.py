@@ -167,12 +167,13 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         global count, count2, torusDir, baseDir
         genDir = baseDir + "/gen" + str(count)
         pastRuns = os.listdir(genDir)
-        print(pastRuns)
+        #print(pastRuns)
         i = 0
         for run in pastRuns:
+            print("/run" + str(i + 1))
             params = population[i]
-            os.chdir(genDir + "/" + str(run))
-            pastParams = open(genDir + "/" + str(run) + "/modParameters.dat", "r").read()
+            os.chdir(genDir + "/run" + str(i + 1))
+            pastParams = open(genDir + "/run" + str(i + 1) + "/modParameters.dat", "r").read()
             lines = pastParams.splitlines()
             for line in lines:
                 line = line.split(' ')
@@ -189,12 +190,24 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             if "hInit" in varNames:
                 index = varNames.index("hInit")
                 params[index] = ((100 * (hmod1 ** (1 / bmod1))) / rmod1) ** bmod1
-            try:
+            
+            files = os.listdir(genDir + "/run" + str(i + 1))
+            #print(files)
+            chiVal = float('inf')
+            for file in files:
+                if "chi" in str(file):
+                    #print(str(file))
+                    chiVal = open(genDir + "/run" + str(i + 1) + '/' + str(file), "r").read()
+                    print(chiVal)
+                    chiVal = chiVal.splitlines()
+                    chiVal = float(chiVal[0])
+
+            """try:
                 chiVal = open(genDir + "/" + str(run) + '/chi' + str(i + 1) + '.dat', "r").read()
                 chiVal = chiVal.splitlines()
                 chiVal = float(chiVal[0])
             except:
-                chiVal = float('inf')
+                chiVal = float('inf')"""
             fx[i] = chiVal
             print(population[i], fx[i])
             os.chdir(genDir)
