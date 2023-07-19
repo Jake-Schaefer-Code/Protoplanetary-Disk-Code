@@ -212,7 +212,7 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             print(population[i], fx[i])
             os.chdir(genDir)
             i+=1
-        return i        
+        return i
 
     os.chdir(baseDir)
     subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
