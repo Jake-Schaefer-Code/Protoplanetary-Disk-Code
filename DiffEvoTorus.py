@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import sys
 
 count, count2 = 0, 1
-baseDir = "/Users/schaeferj/models" # Base Directory
-torusDir = "/Users/schaeferj/torus/bin/torus.openmp"
-# baseDir = "/home/schaeferj/models"
-# torusDir = "/home/schaeferj/torus/bin/torus.openmp"
+#baseDir = "/Users/schaeferj/models" # Base Directory
+#torusDir = "/Users/schaeferj/torus/bin/torus.openmp"
+baseDir = "/home/schaeferj/models"
+torusDir = "/home/schaeferj/torus/bin/torus.openmp"
 
 def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7, popSize = 10, genNum = 0):
     global count, count2, baseDir
@@ -107,7 +107,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
         # Runs Torus and waits
         os.system("echo $'\n'Run " + num2 + " Started$'\n'")
         os.chdir(runFolder)
-        os.system("sh /Users/schaeferj/Desktop/execute.sh")
+        os.system("sh /home/schaeferj/Desktop/execute.sh")
         
         # Finds Chi Square and writes it in a file
         # This try-except loop should attempt to rerun torus if torus is killed 9
@@ -116,7 +116,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
             chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
             completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
         except:
-            os.system("sh /Users/schaeferj/Desktop/execute.sh")
+            os.system("sh /home/schaeferj/Desktop/execute.sh")
 
         # If torus is killed again, it will set the chi squared to infinity and not consider
         # thse parameters
@@ -538,8 +538,8 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
     plt.close() # EAR
 
 def main():
-    genNum = int(sys.argv[1])
-    restarting = bool(sys.argv[2])
+    restarting = bool(sys.argv[1])
+    genNum = int(sys.argv[2])
     print(genNum, restarting)
     result = differential_evolution(False, restarting, (0.5,1.0), 0.7, 10, genNum)
     print(result)
