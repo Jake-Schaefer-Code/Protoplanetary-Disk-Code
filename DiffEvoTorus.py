@@ -11,7 +11,7 @@ torusDir = "/Users/schaeferj/torus/bin/torus.openmp"
 # baseDir = "/home/schaeferj/models"
 # torusDir = "/home/schaeferj/torus/bin/torus.openmp"
 
-def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 10, genNum = 0, restarting = False):
+def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7, popSize = 10, genNum = 0):
     global count, count2, baseDir
 
     # Each entry bounds[i,:] = upper, lower bounds of i
@@ -163,6 +163,8 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
         count2+=1
         return chi
 
+    
+
     def restart(population, fx):
         global count, count2, torusDir, baseDir
         genDir = baseDir + "/gen" + str(count)
@@ -192,13 +194,12 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
                 params[index] = ((100 * (hmod1 ** (1 / bmod1))) / rmod1) ** bmod1
             
             files = os.listdir(genDir + "/run" + str(i + 1))
-            #print(files)
             chiVal = float('inf')
             for file in files:
                 if "chi" in str(file):
                     #print(str(file))
                     chiVal = open(genDir + "/run" + str(i + 1) + '/' + str(file), "r").read()
-                    print(chiVal)
+                    #print(chiVal)
                     chiVal = chiVal.splitlines()
                     chiVal = float(chiVal[0])
 
@@ -213,7 +214,7 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             os.chdir(genDir)
             i+=1
         return i
-
+        
     os.chdir(baseDir)
     subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
     os.chdir(baseDir + '/gen' + str(count))
@@ -222,15 +223,18 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
     bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
     indices = np.arange(N)
     fx = np.full(N, float('inf'))
-
+    print(fx)
+    
     if restarting:
         x = x*brange + bmin
+        restarting = True
         count += genNum
         count2 += restart(x, fx)
         x = (x - bmin)/brange
-        fx[count2-1:] = np.array([objective_fn(xi) for xi in x*brange+bmin[count2-1:]])
-    else:
+        fx[count2-1:] = np.array([objective_fn(xi) for xi in (x*brange+bmin)[count2-1:]])
+    elif restarting == False:
         fx = np.array([objective_fn(xi) for xi in x*brange+bmin])
+        
 
 
 
@@ -297,6 +301,10 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
             return varNames, y, np.min(fx)
 
     return varNames, y, np.min(fx) # Returns variable names, vector with lowest chi value, and lowest chi value
+
+
+
+
 
 def findChi(modelPath, dataPath):
 
@@ -530,13 +538,10 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
     plt.close() # EAR
 
 def main():
-    try:
-        genNum = int(sys.argv[1])
-        restarting = bool(sys.argv[2])
-        print(genNum, restarting)
-        result = differential_evolution(False, (0.5,1.0), 0.7, 10, genNum, restarting)
-    except:
-        result = differential_evolution(False)
+    genNum = int(sys.argv[1])
+    restarting = bool(sys.argv[2])
+    print(genNum, restarting)
+    result = differential_evolution(False, restarting, (0.5,1.0), 0.7, 10, genNum)
     print(result)
 
 if __name__ == '__main__':
