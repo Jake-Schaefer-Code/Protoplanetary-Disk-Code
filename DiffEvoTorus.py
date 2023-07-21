@@ -18,7 +18,7 @@ def differential_evolution(converged, mutation = (0.5,1.0), P = 0.7, popSize = 1
     bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.05], [5.0, 20.0]])
 
     # Variable names corresponding to bound indices
-    varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"]
+    varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc1", "hInit"]
     
     # Code to update value in parameters file
     def replaceValue(line, index, newVal):
