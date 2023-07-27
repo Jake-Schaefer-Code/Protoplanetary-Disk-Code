@@ -58,11 +58,11 @@ def main():
     for key in data:
         f.write(key + ",")
         for val in data[key]:
-            f.write(str(data[key]) + ",")
+            f.write(str(val) + ",")
         f.write("\n")
     f.close()
 
-#
+
 if __name__ == '__main__':
     main()
 
