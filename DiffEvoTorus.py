@@ -4,6 +4,7 @@ import os
 import pyvista as pv
 import matplotlib.pyplot as plt
 import sys
+import time
 
 count, count2 = 0, 1
 #baseDir = "/Users/schaeferj/models" # Base Directory
@@ -18,7 +19,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
     bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.05], [5.0, 20.0]])
 
     # Variable names corresponding to bound indices
-    varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc1", "hInit"]
+    varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"]
     
     # Code to update value in parameters file
     def replaceValue(line, index, newVal):
@@ -29,7 +30,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
     # Checks if objective function value is low enough to stop
     def converged(fit):
         for chi in fit:
-            if chi <= 100:
+            if chi <= 10:
                 return True
         return False
 
@@ -116,6 +117,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
             chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
             completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
         except:
+            print("Run failed at " + time.ctime(time.time()) + " Trying again")
             os.system("sh /home/schaeferj/Desktop/execute.sh")
 
         # If torus is killed again, it will set the chi squared to infinity and not consider
@@ -126,6 +128,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
             completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
         except:
             chi = float('inf')
+            print("Run failed again at " + time.ctime(time.time()))
             completeStr = 'Run ' + num2 + ' Failed. No chi value.'
 
         f = open(runFolder + '/chi' + num2 + '.dat', 'w')
@@ -140,6 +143,10 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
             # so this pulls out the lucy .vtu files
             if str(file)[:4] == 'lucy' and str(file)[-4:] == '.vtu': 
                 lucy_list.append(file)
+            
+            # Removes all lucy*.dat files
+            if str(file)[:4] == 'lucy' and str(file)[-4:] == '.dat':
+                os.remove(file)
         
         maxLucy, maxFile = 0, None
         for file in lucy_list:
@@ -236,7 +243,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
         fx = np.array([objective_fn(xi) for xi in x*brange+bmin])
         
 
-
+    # TODO: add code to remove lucy.dat
 
     # For using an array of known best values to start:
     # Can use this instead of random if program restarted
