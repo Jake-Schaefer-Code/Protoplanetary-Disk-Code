@@ -12,13 +12,14 @@ grainfrac1 = np.array([0.01011,0.00513])
 mdisc1 = np.array([0.02259,0.00591])
 hInit = np.array([17.81,16.65])
 
-data = [alphamod1, betamod1, grainfrac1, mdisc1, hInit, chisq]
+#data = [alphamod1, betamod1, grainfrac1, mdisc1, hInit, chisq]
+data = {"alphamod1":alphamod1, "betamod1":betamod1, "grainfrac1":grainfrac1, "mdisc1":mdisc1, "hInit":hInit, "chisq":chisq}
+
 
 def main():
     numGens = int(sys.argv[1])
-    for i in range(numGens):
-        #os.chdir(baseDir + "gen" + str(i))
-        genDir = baseDir + "gen" + str(i)
+    for j in range(numGens):
+        genDir = baseDir + "gen" + str(j)
         pastRuns = os.listdir(genDir)
         for i in range(len(pastRuns)):
             os.chdir(genDir + "/run" + str(i + 1))
@@ -28,8 +29,8 @@ def main():
                 line = line.split(' ')
                 varName = line[0]
                 if varName in varNames:
-                    index = varNames.index(varName)
-                    np.insert(data[index], float(line[1]))
+                    #index = varNames.index(varName)
+                    np.append(data[varName], float(line[1]))
                 if varName == "heightmod1":
                     hmod1 = float(line[1])
                 if varName == "rinnermod1":
@@ -37,8 +38,8 @@ def main():
                 if varName == "betamod1":
                     bmod1 = float(line[1])
             if "hInit" in varNames:
-                index = varNames.index("hInit")
-                np.insert(data[index], ((100 * (hmod1 ** (1 / bmod1))) / rmod1) ** bmod1)
+                #index = varNames.index("hInit")
+                np.append(data["hInit"], ((100 * (hmod1 ** (1 / bmod1))) / rmod1) ** bmod1)
             files = os.listdir(genDir + "/run" + str(i + 1))
             chiVal = float('inf')
             for file in files:
@@ -46,7 +47,7 @@ def main():
                     chiVal = open(genDir + "/run" + str(i + 1) + '/' + str(file), "r").read()
                     chiVal = chiVal.splitlines()
                     chiVal = float(chiVal[0])
-            np.insert(data[5], chiVal)
+            np.append(data["chisq"], chiVal)
             os.chdir(genDir)
     for i in range(len(data)):
         print(data[i])
