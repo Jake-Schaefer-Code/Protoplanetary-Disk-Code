@@ -53,9 +53,12 @@ def main():
             #np.append(data["chisq"], chiVal)
             data["chisq"] += [chiVal]
             os.chdir(genDir)
+    
+    f = open(baseDir + "runData.dat", "w")
     for key in data:
-        print(key)
-        print(data[key])
+        f.write(key + ",")
+        f.write(",".join(data[key])+",\n")
+    f.close()
 
 
 if __name__ == '__main__':
