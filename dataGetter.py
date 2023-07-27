@@ -57,7 +57,9 @@ def main():
     f = open(baseDir + "runData.dat", "w")
     for key in data:
         f.write(key + ",")
-        f.write(",".join(data[key])+",\n")
+        for val in data[key]:
+            f.write(str(data[key]) + ",")
+        f.write("\n")
     f.close()
 
 
