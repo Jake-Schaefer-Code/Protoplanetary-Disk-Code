@@ -3,6 +3,8 @@ import subprocess
 import os
 import ChiSq
 import vtuPlotter as vp
+import time
+import sys
 
 count, count2 = 0, 1
 
@@ -12,10 +14,11 @@ baseDir = "/home/schaeferj/models"
 torusDir = "/home/schaeferj/torus/bin/torus.openmp"
 
 # Each entry bounds[i,:] = upper, lower bounds of i
-bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133]])
+bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.05], [5.0, 20.0]])
 
 # Variable names corresponding to bound indices
-varNames = ["alphamod1", "betamod1", "grainfrac1"] 
+varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"]
+
 
 # Code to update value in parameters file
 def replaceValue(line, index, newVal):
@@ -23,12 +26,14 @@ def replaceValue(line, index, newVal):
         second = line[index+1:]
         return first + [newVal] + second
 
+
 # Checks if objective function value is low enough to stop
 def converged(fit):
     for chi in fit:
-        if chi <= 100:
+        if chi <= 10:
             return True
     return False
+
 
 # Objective function used to measure convergence to best vector
 def objective_fn(params):
@@ -37,9 +42,8 @@ def objective_fn(params):
     
     # Creates new directory that will contain data from the current run
     runFolder = baseDir + "/gen" + str(count) + "/run" + num2
-    subprocess.call(['mkdir ' + runFolder, '/'], shell=True)
     os.chdir(runFolder)
-    #subprocess.call(['mkdir ' + runFolder + '; cd ' + runFolder, '/'], shell=True)
+    subprocess.call(['mkdir ' + runFolder, '/'], shell=True)
 
     # Opens base parameters file
     baseParams = open(baseDir + '/modParameters.dat', 'r').read()
@@ -54,11 +58,14 @@ def objective_fn(params):
         line = line.split(' ')
         varName = line[0]
         if varName in varNames: line = replaceValue(line, 1, params[varNames.index(varName)])
-        lineDict[varName] = line
         outputLines += [line]
+        lineDict[varName] = line
 
-    # Values that other Parameters depend on   
-    rPrev, hPrev = 100.0, 10.0
+    # Values that other Parameters depend on
+    rPrev = 100.0
+    # hPrev is not an actual paraneter in the file, but it is the height used
+    # to initialize heightmod1
+    hPrev = float(params[varNames.index("hInit")])
     rCur = float(lineDict["rinnermod1"][1])
     betamod = float(lineDict["betamod1"][1])
     alphamod = float(lineDict["alphamod1"][1])
@@ -67,7 +74,6 @@ def objective_fn(params):
     for line in outputLines:
         varName = line[0]
 
-        # 
         if "heightmod" in varName:
             newVal = hPrev * ((rCur/rPrev) ** betamod)
             line = replaceValue(line, 1, str(newVal))
@@ -76,8 +82,7 @@ def objective_fn(params):
             if modNum < 5:
                 rPrev = float(lineDict["rinnermod" + str(modNum)][1])
                 rCur = float(lineDict["rinnermod" + str(modNum + 1)][1])
-
-        # 
+                
         elif "settleheight" in varName:
             newVal = 0.7*hPrev if varName[-1] == "1" else 0.1*hPrev
             line = replaceValue(line, 1, str(newVal))
@@ -94,14 +99,32 @@ def objective_fn(params):
     newParams.close()
 
     # Runs Torus and waits
-    os.system("sh /home/schaeferj/Desktop/execute.sh")
+    os.system("echo $'\n'Run " + num2 + " Started$'\n'")
+    os.chdir(runFolder)
+    os.system("sh " + baseDir + "/execute.sh")
     
     # Finds Chi Square and writes it in a file
-    chi = ChiSq.findChi(runFolder + '/sed_inc042.dat', baseDir + '/mwc275_phot_cleaned_0.dat')
+    # This try-except loop should attempt to re-run torus if torus is killed 9
+    try: 
+        chi = ChiSq.findChi(runFolder + '/sed_inc042.dat', baseDir + '/mwc275_phot_cleaned_0.dat', count2)
+        completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
+    except:
+        print("Run failed at " + time.ctime(time.time()) + " Trying again")
+        os.system("sh /home/schaeferj/Desktop/execute.sh")
+    
+    # If torus is killed again, it will set the chi squared to infinity and not consider
+    # these parameters
+    try:
+        chi = ChiSq.findChi(runFolder + '/sed_inc042.dat', baseDir + '/mwc275_phot_cleaned_0.dat', count2)
+        completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
+    except:
+        chi = float('inf')
+        print("Run failed again at " + time.ctime(time.time()))
+        completeStr = 'Run ' + num2 + ' Failed. No chi value.'
+
     f = open(runFolder + '/chi' + num2 + '.dat', 'w')
     f.write(str(chi))
     f.close()
-
 
     total_dir_list = os.listdir(runFolder)
     lucy_list = []
@@ -109,13 +132,15 @@ def objective_fn(params):
         # Torus produces some lucy.dat files and other .vtu files, 
         # so this pulls out the lucy .vtu files
         if str(file)[:4] == 'lucy' and str(file)[-4:] == '.vtu': lucy_list.append(file)
+
+        # Removes all lucy*.dat files
+        if str(file)[:4] == 'lucy' and str(file)[-4:] == '.dat': os.remove(file)
     
     maxLucy, maxFile = 0, None
     for file in lucy_list:
         lucyNum = int(str(file.split('_')[1])[:-4]) # Pulls out number between lucy_ and .vtu
-        if lucyNum > maxLucy: # Gets latest lucy iteration
-            maxLucy = lucyNum
-            maxFile = file
+        # Gets latest lucy iteration
+        if lucyNum > maxLucy: maxLucy, maxFile = lucyNum, file
 
     # Only plot vtu if there is a lucy file
     if maxFile != None: vp.bigPlot(maxFile, runFolder)
@@ -125,18 +150,62 @@ def objective_fn(params):
     os.chdir(baseDir)
 
     # Unnecessary, but prints completed message
-    completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
     decor = "%"*len(completeStr)
     os.system("echo " + decor + "$'\n'" + completeStr + "$'\n'" + decor)
+    os.chdir(baseDir)
 
     count2+=1
     return chi
 
+# Code to continue running the program from the most recent generation and run if it was killed
+# Takes the most recent parameter population and fit metric array as arguments
+def restart(population, fx):
+    global count, count2, torusDir, baseDir, varNames
+    genDir = baseDir + "/gen" + str(count)
+    pastRuns = os.listdir(genDir)
+    numRuns = 0
+
+    # Goes through each run in the current generation
+    for i in range(len(pastRuns)):
+        runDir = "/run" + str(i + 1)
+        params = population[i]
+        os.chdir(genDir + runDir)
+        runParams = open(genDir + runDir + "/modParameters.dat", "r").read()
+        lines = runParams.splitlines()
+
+        # Setting the params of the current population member to those used in the respective run
+        for line in lines:
+            line = line.split(' ')
+            varName = line[0]
+            if varName in varNames: params[varNames.index(varName)] = float(line[1])
+            if varName == "heightmod1": hmod1 = float(line[1]) 
+            elif varName == "rinnermod1": rmod1 = float(line[1])
+            elif varName == "betamod1": bmod1 = float(line[1])
+        if "hInit" in varNames:
+            params[varNames.index("hInit")] = ((100 * (hmod1 ** (1 / bmod1))) / rmod1) ** bmod1
+
+        files = os.listdir(genDir + "/run" + str(i + 1))
+        chiVal = float('inf')
+        for file in files:
+            # Reading the chi file and getting the chi value for the current run
+            if "chi" in str(file):
+                chiFile = open(genDir + "/run" + str(i + 1) + '/' + str(file), "r").read()
+                chiVal = float(chiFile.splitlines()[0])
+
+        # Adds the chi value for the current population member
+        fx[i] = chiVal
+        print(runDir)
+        print(population[i], fx[i])
+        os.chdir(genDir)
+        numRuns += 1
+
+    return numRuns
+
 
 # Code for running the actual DE
 # Returns variable names, vector with lowest chi value, and lowest chi value
-def differential_evolution(mutation = (0.5,1.0), P = 0.7, popSize = 10):
-    global count, baseDir, bounds, varNames
+def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7, popSize = 10, genNum = 0):
+    global count, count2, baseDir, bounds, varNames
 
     os.chdir(baseDir)
     subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
@@ -145,6 +214,20 @@ def differential_evolution(mutation = (0.5,1.0), P = 0.7, popSize = 10):
     x = np.random.rand(N, K) # initial (normed) population array with random values
     bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
     indices = np.arange(N)
+    fx = np.full(N, float('inf'))
+
+
+    if restarting:
+        x = x*brange + bmin
+        restarting = True
+        count += genNum
+        count2 += restart(x, fx)
+        x = (x - bmin)/brange
+        print(np.shape(fx[count2-1:]))
+        fx[count2-1:N+1] = np.array([objective_fn(xi) for xi in (x*brange+bmin)[count2-1:N+1]]) # TODO: something weird about this... fix later
+        # TODO: got cannot cast shape (0,) to shape (6,) or vice versa error
+    elif restarting == False:
+        fx = np.array([objective_fn(xi) for xi in x*brange+bmin])
     
 
     # For using an array of known best values to start:
@@ -167,7 +250,6 @@ def differential_evolution(mutation = (0.5,1.0), P = 0.7, popSize = 10):
     
 
     # Fit metrics: the chi square value for each population member
-    fx = np.array([objective_fn(xi) for xi in x*brange+bmin])
     count+=1
 
     while not converged(fx):
@@ -194,7 +276,7 @@ def differential_evolution(mutation = (0.5,1.0), P = 0.7, popSize = 10):
         best = x[np.argmin(fx)]*brange+bmin # Gets the vector from x with lowest chi value, mult by range and added to min
 		
         # Code to save the population of x as a csv file
-        csv = open(baseDir + "/gen" + str(count) + "/result" + str(count) + ".dat", "w")
+        csv = open(baseDir + "/result" + str(count) + ".dat", "w")
         csv.write(",".join(varNames)+",ChiValue\n")
         for member in x*brange+bmin:
             index2 = np.where(x*brange+bmin == member)[0][0]
@@ -212,7 +294,9 @@ def differential_evolution(mutation = (0.5,1.0), P = 0.7, popSize = 10):
     return varNames, best, np.min(fx)
 
 def main():
-    result = differential_evolution()
+    restarting = bool(sys.argv[1])
+    genNum = int(sys.argv[2])
+    result = differential_evolution(False, restarting, (0.5,1.0), 0.7, 10, genNum)
     print(result)
 
 if __name__ == '__main__':
