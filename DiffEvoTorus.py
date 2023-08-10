@@ -201,12 +201,14 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
                 if "chi" in str(file):
                     chiFile = open(prevGenDir + runDir + '/' + str(file), "r").read()
                     chiVal = float(chiFile.splitlines()[0])
-            prevFx[i] = chiVal
+                    #print(chiVal)
+            #np.put(prevFx, [i], [chiVal])
+            prevFx[i:i+1] = chiVal
             j = np.argmin(prevFx)
+            prevNumRuns += 1
+        #print(prevFx)
 
         return (prevPop[j], prevFx[j])
-
-
 
     def restart(population, fx):
         global count, count2, torusDir, baseDir
@@ -242,10 +244,12 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
 
             # Adds the chi value for the current population member
             fx[i] = chiVal
-            print(runDir)
-            print(population[i], fx[i])
+            #print(population[i], params)
+            #print("run" + str(i) + " chi")
+            #print(fx[i])
             os.chdir(genDir)
             numRuns += 1
+        
 
         return numRuns
         
@@ -257,7 +261,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
     bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
     indices = np.arange(N)
     fx = np.full(N, float('inf'))
-    print(fx)
+    fxtrial = np.full(N, float('inf'))
     
     if restarting:
         x = x*brange + bmin
@@ -269,7 +273,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
             x2 = np.random.rand(N, K)
             fx2 = np.full(N, float('inf'))
             prevBest = getPrevBest(x2, fx2)
-            print(prevBest)
+            #print(prevBest)
             if type(mutation) == tuple:
                 m = np.random.uniform(*mutation) # If want m to be random multiple value each generation
             else:
@@ -280,15 +284,25 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
             for i in indices:
                 k,l = np.random.choice(indices[np.isin(indices, [i], invert=True)], 2)
                 xmi = np.clip(best + m*(x[k]-x[l]),0,1)
-                print(xmi)
+                #print(xmi)
                 xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i])
-            fxtrial = np.full(N, float('inf'))
-            fxtrial[count2-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[count2-1:N+1]])
+            os.chdir(baseDir + "/gen" + str(count))
+            if count >= 1:
+                fxtrial[count2-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[(count2%50)-1:N+1]])
+                print(fxtrial)
+                print(count2%50)
+                print(N+1)
+                print(fxtrial[(count2%50)-1:N+1])
+            """try:
+                fxtrial[count2-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[count2-1:N+1]])
+            except:
+                fxtrial[count2-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[count2-1:N+1]])
+                print("what??????")"""
             improved = fxtrial < fx # Array of booleans indicating which trial members were improvements
             x[improved], fx[improved] = xtrial[improved], fxtrial[improved]
-            
-        else:
-            fx[count2-1:N+1] = np.array([objective_fn(xi) for xi in (x*brange+bmin)[count2-1:N+1]])
+
+        elif count < 1:
+            fx[count2-1:N+1] = np.array([objective_fn(xi) for xi in (x*brange+bmin)[(count2%50)-1:N+1]])
         
         #print(np.shape(fx[count2-1:]))
         # TODO: something weird about this... fix later
