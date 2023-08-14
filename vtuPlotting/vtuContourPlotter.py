@@ -296,6 +296,8 @@ def plot_density_with_scattering(scatterPath, vtuPath, tauHeight = 1):
         ax.set_adjustable('box')
         ax.autoscale('False')
         ax.set_title(('dust1', 'dust2')[i-1])
+        if i == 1:
+            ax.set_ylabel('Height (AU)')
         ax.legend()
         axes.append(ax)
         i += 1
@@ -308,6 +310,10 @@ def plot_density_with_scattering(scatterPath, vtuPath, tauHeight = 1):
         rounded = '%s' % float('%.3g' % actual) # rounding the tick labels to 3 sig figs
         newLabels.append(str(rounded))
     cbar.set_ticks(tickLocs, labels = newLabels)
+    cbar.set_label('Density')
+    cbar.ax.yaxis.set_label_position('left')
+    fig.supxlabel('Radius (AU)')
+    plt.suptitle('Dust density cross-sections & scattering surfaces')
     plt.show()
     return
 
