@@ -32,6 +32,11 @@ vtuContourPlotter.bigPlot(filename)
     it adds virtually no time, but it is annoying and I would like it to run faster. The module currently renders every image separately, rather than rendering one image
     for each parameter and zooming in. This could likely be solved by setting one ax as the full image, copying it to two other axes, and then setting plt.xlim() for 
     those plots. 
+
+--  8/14 added scattering surface functionality. Reads in a scattering surface file and plots the surface at a desired tau height. Not built into the main function. Call 
+    plot_density_with_scattering(scatterPath, vtuPath) to see a side-by-side plot of dust1 and dust2 density with overlaid scattering surfaces. Optional parameter: tauHeight, 
+    which controls the displayed scattering surface. Default is at tau height = 1, but can also show 0.01, 0.1, and 0.5. Also can call tauHeight = [some iterable of those values],
+    which will display multiple scattering surfaces.
 """
 
 def plot(filename, variable, directory = '', plotsize = 'full'):
@@ -182,10 +187,125 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
     if directory == '':
         plt.savefig(filename.split('.')[0] + '.png')
     else:
-        plt.savefig(directory + '.png') # adjust for personal preference
+        plt.savefig(directory + '_contour_plots.png') # adjust for personal preference
 
     plt.close() # EAR
 
+def scatter_surface(path, tauHeight = 1):
+    """
+    returns a set of radius, height coordinates for a scattering surface at tauHeight.
+    """
+    file = open(path, 'r')
+    text = file.read()
+    file.close()
+
+    lines = text.splitlines()
+
+    radius = []
+    height = []
+
+    # select tau height data from file
+    if tauHeight == 1:
+        cols = (6,7)
+    elif tauHeight == 0.01:
+        cols = (0,1)
+    elif tauHeight == 0.1:
+        cols = (2,3)
+    elif tauHeight == 0.5:
+        cols = (4,5)
+    else:
+        print('tau height invalid! accepted values: 1, 0.01, 0.1, 0.5')
+        return
+    
+
+    for line in lines:
+        entries = line.split()
+        r, h = entries[cols[0]], entries[cols[1]]
+        radius.append(float(r))
+        height.append(float(h))
+
+    posR = []
+    posH = []  
+
+    # scattering surface dat file appends a bunch of negative numbers to the end of the file. Not sure why but don't want to plot them.
+
+    for i in range(len(radius)):
+        if radius[i] > 0:
+            posR.append(radius[i])
+            posH.append(height[i])
+    
+    return posR, posH
+
+def plot_density_with_scattering(scatterPath, vtuPath, tauHeight = 1):
+    """
+    plots dust density for both dust grain types and overlays the scattering surface
+    at heights of 1, 0.01, 0.1, and 0.5 tau. Can plot multiple scattering surfaces or just one.
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    try:
+        # checking to see whether tauHeight is iterable or not.
+        iterator = iter(tauHeight)
+    except TypeError:
+        tauHeight = float(tauHeight)
+        tauIsOneValue = True
+    else:
+        tauIsOneValue = False
+    
+    if tauIsOneValue:
+        # get scattering surface coordinates
+        scatter_x, scatter_y = scatter_surface(scatterPath, tauHeight = tauHeight)
+    else:
+        scatter_coords = []
+        for tau in tauHeight:
+            scatter_coords.append((scatter_surface(scatterPath, tauHeight = tau)))
+    
+    density_tuple_1 = plot(vtuPath, 'dust1')
+    density_tuple_2 = plot(vtuPath, 'dust2')
+    rho_tuple = plot(vtuPath, 'rho')
+    x, y, u1 = density_tuple_1[0], density_tuple_1[1], density_tuple_1[2]
+    u2 = density_tuple_2[2]
+    u_rho = rho_tuple[2]
+
+    # the plot function returns logs of the requested data. the dust1 and dust2 data is not density, it is dust to gas ratio,
+    # so we multiply the data by the gas density to get dust density. Since the values are logarithmic, we add the logs
+
+    u_density_1 = [u1[i] + u_rho[i] for i in range(len(u1))]
+    u_density_2 = [u2[i] + u_rho[i] for i in range(len(u2))]
+
+    combined_u = np.array([u_density_1, u_density_2])
+    _min, _max = np.amin(combined_u), np.amax(combined_u) # put both dust density plots on same scale
+
+    fig = plt.figure()
+    plt.set_cmap('Reds') # default scatter surface color is blue so the contrast is nice. Not necessary
+
+    i = 1
+    axes = []
+    for var in (u_density_1, u_density_2):
+        ax = fig.add_subplot(1, 2, i)
+        im = ax.tricontourf(x, y, var, levels = 20, vmin = _min, vmax = _max)
+        if tauIsOneValue:
+            ax.plot(scatter_x, scatter_y)
+        else:
+            for coords in scatter_coords:
+                ax.plot(coords[0], coords[1])
+        ax.set_adjustable('box')
+        ax.autoscale('False')
+        ax.set_title(('dust1', 'dust2')[i-1])
+        axes.append(ax)
+        i += 1
+    
+    cbar = fig.colorbar(im, ax = axes)
+    tickLocs = cbar.get_ticks() # this part sets the color bar labels to the actual density values, not the logs
+    newLabels = []
+    for tick in tickLocs:
+        actual = 10 ** tick
+        rounded = '%s' % float('%.3g' % actual) # rounding the tick labels to 3 sig figs
+        newLabels.append(str(rounded))
+    cbar.set_ticks(tickLocs, labels = newLabels)
+    plt.show()
+    return
 
 def main():
     """
