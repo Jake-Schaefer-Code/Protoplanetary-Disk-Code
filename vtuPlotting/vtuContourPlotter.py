@@ -277,22 +277,26 @@ def plot_density_with_scattering(scatterPath, vtuPath, tauHeight = 1):
     combined_u = np.array([u_density_1, u_density_2])
     _min, _max = np.amin(combined_u), np.amax(combined_u) # put both dust density plots on same scale
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(18, 6))
     plt.set_cmap('Reds') # default scatter surface color is blue so the contrast is nice. Not necessary
 
+    colors = ('b', 'g', 'y', 'k') # don't want red on red
     i = 1
     axes = []
     for var in (u_density_1, u_density_2):
         ax = fig.add_subplot(1, 2, i)
         im = ax.tricontourf(x, y, var, levels = 20, vmin = _min, vmax = _max)
         if tauIsOneValue:
-            ax.plot(scatter_x, scatter_y)
+            ax.plot(scatter_x, scatter_y, label = str(tauHeight) + r'$\tau$')
         else:
+            j = 0
             for coords in scatter_coords:
-                ax.plot(coords[0], coords[1])
+                ax.plot(coords[0], coords[1], color=colors[j], label = str(tauHeight[j]) + r'$\tau$')
+                j += 1
         ax.set_adjustable('box')
         ax.autoscale('False')
         ax.set_title(('dust1', 'dust2')[i-1])
+        ax.legend()
         axes.append(ax)
         i += 1
     
