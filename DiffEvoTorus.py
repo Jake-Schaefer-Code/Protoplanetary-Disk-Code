@@ -35,11 +35,9 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
         return False
 
 
-
     def objective_fn(params):
         global count, count2, torusDir, baseDir
         num2 = str(count2)
-        
         # Creates new directory that will contain data from the current run
         runFolder = baseDir + "/gen" + str(count) + "/run" + num2
         os.chdir(baseDir)
@@ -80,6 +78,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
                 line = replaceValue(line, 1, str(newVal))
                 hPrev = newVal
                 modNum = int(varName[-1])
+                #print("heightmod", modNum, newVal)
                 if modNum < 5:
                     rPrev = float(lineDict["rinnermod" + str(modNum)][1])
                     rCur = float(lineDict["rinnermod" + str(modNum + 1)][1])
@@ -104,6 +103,7 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
                 outputLine += str(item) + ' '
             newParams.write(outputLine + '\n' )
         newParams.close()
+        print("cur params:", params)
 
         # Runs Torus and waits
         os.system("echo $'\n'Run " + num2 + " Started$'\n'")
@@ -170,53 +170,75 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
         count2+=1
         return chi
 
-    
-    def getPrevBest(prevPop, prevFx):
-        global count, count2, torusDir, baseDir
-        prevGenDir = baseDir + "/gen" + str(count - 1)
-        prevNumRuns = (count - 1) * 10 * len(varNames)
-        prevRuns = os.listdir(prevGenDir)
+    def diffevo(x, fx):
+        if type(mutation) == tuple:
+            m = np.random.uniform(*mutation) # If want m to be random multiple value each generation
+        else:
+            m = mutation # If want m to be constant value
 
-        for i in range(len(prevRuns)):
-            runDir = "/run" + str(prevNumRuns + 1)
-            prevParams = prevPop[i]
-            os.chdir(prevGenDir + runDir)
-            runParams = open(prevGenDir + runDir + "/modParameters.dat", "r").read()
-            lines = runParams.splitlines()
+        xtrial = np.zeros_like(x) # trial vector full of zeros
+        j = np.argmin(fx) # index of best member
 
-            for line in lines:
-                line = line.split(' ')
-                varName = line[0]
-                if varName in varNames: prevParams[varNames.index(varName)] = float(line[1])
-                if varName == "heightmod1": hmod1 = float(line[1]) 
-                elif varName == "rinnermod1": rmod1 = float(line[1])
-                elif varName == "betamod1": bmod1 = float(line[1])
-            if "hInit" in varNames:
-                prevParams[varNames.index("hInit")] = ((100 * (hmod1 ** (1 / bmod1))) / rmod1) ** bmod1
-            
-            files = os.listdir(prevGenDir + runDir)
-            chiVal = float('inf')
-            for file in files:
-                # Reading the chi file and getting the chi value for the current run
-                if "chi" in str(file):
-                    chiFile = open(prevGenDir + runDir + '/' + str(file), "r").read()
-                    chiVal = float(chiFile.splitlines()[0])
-                    #print(chiVal)
-            #np.put(prevFx, [i], [chiVal])
-            prevFx[i:i+1] = chiVal
-            j = np.argmin(prevFx)
-            prevNumRuns += 1
-        #print(prevFx)
+        # Creates trial population, consisting of mutated and past vectors
+        for i in indices:
+            k,l = np.random.choice(indices[np.isin(indices, [i,j], invert=True)], 2) # Chooses 2 random vectors that are not xbest or xi
+            xmi = np.clip(x[j] + m*(x[k]-x[l]),0,1) # Creates mutated xi vector: xbest + mutant vector
+            xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i]) # Probability that value will be replaced by xmi is 0.7 else = x[i]
 
-        return (prevPop[j], prevFx[j])
+        fxtrial = np.array([objective_fn(xi) for xi in xtrial*brange+bmin]) 
+        improved = fxtrial < fx # Array of booleans indicating which trial members were improvements
+        x[improved], fx[improved] = xtrial[improved], fxtrial[improved] # Replaces values in population with improved ones
+        return
 
     def restart(population, fx):
         global count, count2, torusDir, baseDir
-        genDir = baseDir + "/gen" + str(count)
-        pastRuns = os.listdir(genDir)
-        numRuns = count * 10 * len(varNames)
+        #genDir = baseDir + "/gen" + str(count)
+        #pastRuns = os.listdir(genDir)
+        #numRuns = count * 10 * len(varNames)
+        
 
-        for i in range(len(pastRuns)):
+
+        numRuns = 0
+        # For each previous generation
+        for i in range(count + 1):
+            genDir = baseDir + "/gen" + str(i)
+            pastRuns = os.listdir(genDir)
+
+            # For each run in the previous generation
+            for j in range(len(pastRuns)):
+                #print("restart" + str(count) + str(i) + str(j))
+                runDir = "/run" + str((10 * len(varNames) * i) + j + 1)
+                params = population[i]
+                os.chdir(genDir + runDir)
+                runParams = open(genDir + runDir + "/modParameters.dat", "r").read()
+                lines = runParams.splitlines()
+
+                for line in lines:
+                    line = line.split(' ')
+                    varName = line[0]
+                    if varName in varNames: params[varNames.index(varName)] = float(line[1])
+                    if varName == "heightmod1": hmod1 = float(line[1]) 
+                    elif varName == "rinnermod1": rmod1 = float(line[1])
+                    elif varName == "betamod1": bmod1 = float(line[1])
+                if "hInit" in varNames:
+                    params[varNames.index("hInit")] = ((100 * (hmod1 ** (1 / bmod1))) / rmod1) ** bmod1
+
+                files = os.listdir(genDir + runDir)
+                chiVal = float('inf')
+                for file in files:
+                    # Reading the chi file and getting the chi value for the current run
+                    if "chi" in str(file):
+                        chiFile = open(genDir + runDir + '/' + str(file), "r").read()
+                        chiVal = float(chiFile.splitlines()[0])
+                
+                print("gen num: ", i, "run num: ", j, population[i], params) 
+                fx[j] = chiVal
+                os.chdir(genDir)
+                numRuns += 1 # TODO: need to fix this so that it doesnt count a run without a chi value as a complete run
+            #print(population)
+
+
+        """for i in range(len(pastRuns)):
             runDir = "/run" + str(numRuns + 1)
             params = population[i]
             os.chdir(genDir + runDir)
@@ -248,11 +270,13 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
             #print("run" + str(i) + " chi")
             #print(fx[i])
             os.chdir(genDir)
-            numRuns += 1
+            numRuns += 1"""
         
 
         return numRuns
         
+
+    
     os.chdir(baseDir)
     subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
     os.chdir(baseDir + '/gen' + str(count))
@@ -264,40 +288,43 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
     fxtrial = np.full(N, float('inf'))
     
     if restarting:
-        x = x*brange + bmin
+        for i in range(len(x)):
+            x[i] = x[i]*brange + bmin
         restarting = True
         count += genNum
         count2 += restart(x, fx)
-        x = (x - bmin)/brange
+        #print(count2)
+        print("before constrain: ", x)
+        for i in range(len(x)):
+            x[i] = (x[i] - bmin)/brange
+        print(x)
+
+
         if count >= 1:
-            x2 = np.random.rand(N, K)
+            """x2 = np.random.rand(N, K)
             fx2 = np.full(N, float('inf'))
             prevBest = getPrevBest(x2, fx2)
-            #print(prevBest)
+            print("Best data set: chi: " + str(prevBest[1]) + ", " + varNames[0] + ": " + str(prevBest[0][0])
+                  + ", " + varNames[1] + ": " + str(prevBest[0][1]) + ", " + varNames[2] + ": " + str(prevBest[0][2])
+                  + ", " + varNames[3] + ": " + str(prevBest[0][3]) + ", " + varNames[4] + ": " + str(prevBest[0][4]))"""
+            
+            
             if type(mutation) == tuple:
                 m = np.random.uniform(*mutation) # If want m to be random multiple value each generation
             else:
                 m = mutation # If want m to be constant value
-            input = prevBest[0]
+
+            j = np.argmin(fx) # index of best member
+            print("best fx:", fx[j], "best params:", x[j])
             xtrial = np.zeros_like(x)
-            best = (input - bmin)/brange 
+
             for i in indices:
-                k,l = np.random.choice(indices[np.isin(indices, [i], invert=True)], 2)
-                xmi = np.clip(best + m*(x[k]-x[l]),0,1)
-                #print(xmi)
-                xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i])
+                k,l = np.random.choice(indices[np.isin(indices, [i,j], invert=True)], 2) # Chooses 2 random vectors that are not xbest or xi
+                xmi = np.clip(x[j] + m*(x[k]-x[l]),0,1) # Creates mutated xi vector: xbest + mutant vector
+                xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i]) # Probability that value will be replaced by xmi is 0.7 else = x[i]
+
             os.chdir(baseDir + "/gen" + str(count))
-            if count >= 1:
-                fxtrial[count2-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[(count2%50)-1:N+1]])
-                print(fxtrial)
-                print(count2%50)
-                print(N+1)
-                print(fxtrial[(count2%50)-1:N+1])
-            """try:
-                fxtrial[count2-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[count2-1:N+1]])
-            except:
-                fxtrial[count2-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[count2-1:N+1]])
-                print("what??????")"""
+            fxtrial[(count2%50)-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[(count2%50)-1:N+1]])
             improved = fxtrial < fx # Array of booleans indicating which trial members were improvements
             x[improved], fx[improved] = xtrial[improved], fxtrial[improved]
 
@@ -321,11 +348,9 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
     input = np.array([2.3966,1.0823,0.01406]) # Put desired input array
     xtrial = np.zeros_like(x)
     best = (input - bmin)/brange 
-    print(input, best)
     for i in indices:
         k,l = np.random.choice(indices[np.isin(indices, [i], invert=True)], 2)
         xmi = np.clip(best + m*(x[k]-x[l]),0,1)
-        print(xmi)
         xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i])
     fxtrial = np.array([objective_fn(xi) for xi in xtrial*brange+bmin]) 
     improved = fxtrial < fx # Array of booleans indicating which trial members were improvements
@@ -636,7 +661,6 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
 def main():
     restarting = bool(sys.argv[1])
     genNum = int(sys.argv[2])
-    print(genNum, restarting)
     result = differential_evolution(False, restarting, (0.5,1.0), 0.7, 10, genNum)
     print(result)
 
