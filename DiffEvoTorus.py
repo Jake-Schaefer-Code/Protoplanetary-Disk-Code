@@ -34,6 +34,12 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
                 return True
         return False
 
+    def check(population):
+        # if value less than, reject value
+        # if within bounds of what we expect
+        for member in population:
+            pass
+        return
 
     def objective_fn(params):
         global count, count2, torusDir, baseDir
@@ -112,11 +118,11 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
         
         # Finds Chi Square and writes it in a file
         # This try-except loop should attempt to rerun torus if torus is killed 9
-        try: 
+        """try: 
             sed = runFolder + '/sed_inc042.dat'
             chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
             completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
-        except:
+        except IOError:
             print("Run failed at " + time.ctime(time.time()) + " Trying again")
             os.system("sh /home/schaeferj/Desktop/execute.sh")
 
@@ -126,11 +132,15 @@ def differential_evolution(converged, restarting, mutation = (0.5,1.0), P = 0.7,
             sed = runFolder + '/sed_inc042.dat'
             chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
             completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
-        except:
+        except IOError:
             chi = float('inf')
             print("Run failed again at " + time.ctime(time.time()))
-            completeStr = 'Run ' + num2 + ' Failed. No chi value.'
+            completeStr = 'Run ' + num2 + ' Failed. No chi value.'"""
 
+        sed = runFolder + '/sed_inc042.dat'
+        chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
+        completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
+        
         f = open(runFolder + '/chi' + num2 + '.dat', 'w')
         f.write(str(chi))
         f.close()
