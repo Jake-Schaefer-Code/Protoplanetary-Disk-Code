@@ -4,12 +4,18 @@ import os
 import pyvista as pv
 import matplotlib.pyplot as plt
 import sys
+import time
+
 
 count, count2 = 0, 1
-#baseDir = "/Users/schaeferj/models" # Base Directory
-#torusDir = "/Users/schaeferj/torus/bin/torus.openmp"
 baseDir = "/home/schaeferj/models"
 torusDir = "/home/schaeferj/torus/bin/torus.openmp"
+
+# Each entry bounds[i,:] = upper, lower bounds of i
+bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.05], [5.0, 20.0]])
+
+# Variable names corresponding to bound indices
+varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"]
 
 # Checks if objective function value is low enough to stop
 def converged(fit):
@@ -18,30 +24,55 @@ def converged(fit):
             return True
         return False
     
+# Checks if randomly selected parameters will generate a failed run
+def failCheck(params, r):
+    global varNames
+    # if value less than, reject value
+    # if within bounds of what we expect
+    # h = h_0 (r/r_0)^beta
+    # Making sure the params do not force an infinitesimally small disk
+    if "betamod1" or "hInit" in varNames:
+        print(params)
+        h0, beta, r0 = float(params[varNames.index("hInit")]), float(params[varNames.index("betamod1")]), 100
+        h = h0 * ((r / r0) ** beta)
+        if h <= 0.005:
+            print(h)
+            return True
+        
+    return False
+    
 # Code to update value in parameters file
 def replaceValue(line, index, newVal):
     first = line[:index]
     second = line[index+1:]
     return first + [newVal] + second
 
+def findParam(name):
+    # TODO: add a check to make sure name is an actual parameter
+    baseParams = open(baseDir + '/modParameters.dat', 'r').read()
+    lines = baseParams.splitlines()
+    for line in lines:
+        line = line.split(' ')
+        varName = line[0]
+        if varName == name:
+            return float(line[1])
+    # TODO change this to an error
+    print("This parameter is not in the file")    
+
 def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10, genNum = 0):
-    global count, count2, baseDir
+    global count, count2, baseDir, bounds, varNames
 
-    # Each entry bounds[i,:] = upper, lower bounds of i
-    bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.05], [5.0, 20.0]])
+    os.chdir(baseDir)
+    subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
+    os.chdir(baseDir + '/gen' + str(count))
 
-    # Variable names corresponding to bound indices
-    varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"]
+    N,K = bounds.shape[0]*popSize, bounds.shape[0]
+    x = np.random.rand(N, K) # initial (normed) population array with random values
+    bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
 
-    def check(population):
-        # if value less than, reject value
-        # if within bounds of what we expect
-        for member in population:
-            # Conditions:
-            if "betamod1" or "hInit" in varNames:
-                pass
-            pass
-        return
+    # Fit metrics: the chi square value for each population member
+    fx = np.full(N, float('inf'))
+    fxtrial = np.full(N, float('inf'))
 
     def objective_fn(params):
         global count, count2, torusDir, baseDir
@@ -120,7 +151,7 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
         
         # Finds Chi Square and writes it in a file
         # This try-except loop should attempt to rerun torus if torus is killed 9
-        """try: 
+        try: 
             sed = runFolder + '/sed_inc042.dat'
             chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
             completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
@@ -137,11 +168,8 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
         except IOError:
             chi = float('inf')
             print("Run failed again at " + time.ctime(time.time()))
-            completeStr = 'Run ' + num2 + ' Failed. No chi value.'"""
+            completeStr = 'Run ' + num2 + ' Failed. No chi value.'
 
-        sed = runFolder + '/sed_inc042.dat'
-        chi = findChi(sed, baseDir + '/mwc275_phot_cleaned_0.dat')
-        completeStr = 'Run ' + num2 + ' Complete, Chi Value: ' + str(chi)
         
         f = open(runFolder + '/chi.dat', 'w')
         f.write(str(chi))
@@ -172,7 +200,8 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
             bigPlot(maxFile, runFolder)
 
         # Moves the SED, Convergence, Lucy, and plotted vtu files into run folder to save them
-        subprocess.call(["rm " + runFolder + "lucy*.dat", '/'], shell=True)
+        subprocess.call(["rm " + runFolder + "/lucy*.dat", '/'], shell=True)
+        # TODO: fix?
 
         # Unnecessary, but prints completed message
         decor = "%"*len(completeStr)
@@ -194,11 +223,27 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
         j = np.argmin(fx) # index of best member
 
         # Creates trial population, consisting of mutated and past vectors
+        indices = np.arange(N)
         for i in indices:
             k,l = np.random.choice(indices[np.isin(indices, [i,j], invert=True)], 2) # Chooses 2 random vectors that are not xbest or xi
             xmi = np.clip(x[j] + m*(x[k]-x[l]),0,1) # Creates mutated xi vector: xbest + mutant vector
             xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i]) # Probability that value will be replaced by xmi is 0.7 else = x[i]
             # TODO: maybe change this so that all are xmi, or at least dont run torus on runs that have been done
+
+        r = findParam("rinnermod1")
+
+        # TODO: maybe insert this into the check code?
+        for member in xtrial:
+            index = np.where(xtrial == member)[0][0]
+            member = (member * brange + bmin)[0]
+            if failCheck(member, r):
+                print("check failed")
+                while failCheck(member, r):
+                    print("making new vector")
+                    member = np.random.rand(K)
+                    member = (member * brange + bmin)[0]
+                xtrial[index] = member
+
 
         return xtrial
 
@@ -243,20 +288,19 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
                 numRuns += 1 # TODO: need to fix this so that it doesnt count a run without a chi value as a complete run
 
         return numRuns
+    
+    r = findParam("rinnermod1")
+    for member in x:
+        index = np.where(x == member)[0][0]
         
-    
-    
-    os.chdir(baseDir)
-    subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
-    os.chdir(baseDir + '/gen' + str(count))
-    
-    N,K = bounds.shape[0]*popSize, bounds.shape[0]
-    x = np.random.rand(N, K) # initial (normed) population array with random values
-    bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
-    indices = np.arange(N)
-    fx = np.full(N, float('inf'))
-    fxtrial = np.full(N, float('inf'))
-    
+        # TODO why do I need [0] ??????
+        member = (member * brange + bmin)[0]
+        if failCheck(member, r):
+            while failCheck(member, r):
+                print("making new vector")
+                member = np.random.rand(K)
+            x[index] = member
+
     if resuming:
         # TODO: maybe just edit the resume function so i dont have to do this
         for i in range(len(x)):
@@ -283,8 +327,6 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
     elif resuming == False:
         fx = np.array([objective_fn(xi) for xi in x*brange+bmin])
         
-    
-    # Fit metrics: the chi square value for each population member
     count+=1
 
     while not converged(fx):
@@ -316,7 +358,6 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
             return varNames, y, np.min(fx)
 
     return varNames, y, np.min(fx) # Returns variable names, vector with lowest chi value, and lowest chi value
-
 
 def findChi(modelPath, dataPath):
 
@@ -552,8 +593,50 @@ def bigPlot(filename, directory = '', min = 10, mid = 100,
 def main():
     resuming = bool(sys.argv[1])
     genNum = int(sys.argv[2])
+    # TODO add a check if genNum is an int or if resuming is false
     result = differential_evolution(resuming, (0.5,1.0), 0.7, 10, genNum)
     print(result)
 
 if __name__ == '__main__':
     main()
+
+
+"""
+class run:
+    def __init__(self, params, chi) -> None:
+        self.params = params
+        self.chi = chi
+    def returnChi(self):
+        return self.chi
+
+
+# maybe make a parameter space a subclass of population and put functions like mutate there?
+
+class Population:
+    def __init__(self, population, fx, brange, bmin, mutation = (0.5,1.0), popSize = 10):
+        self.pop = population
+        self.fx = fx
+        self.brange = brange
+        self.bmin = bmin
+        self.mutation = mutation
+        self.N,self.K = bounds.shape[0]*popSize, bounds.shape[0]
+    def constrain(self):
+        for i in range(len(self.pop)):
+            self.pop[i] = (self.pop[i] - self.bmin)/self.brange
+        return self.pop
+    def unConstrain(self):
+        for i in range(len(self.pop)):
+            self.pop[i] = (self.pop[i] * self.brange + self.bmin)[0]
+        return self.pop
+    def returnPop(self):
+        return self.pop
+    def mutate(self):
+        global count, count2, baseDir
+        if type(self.mutation) == tuple:
+            m = np.random.uniform(*self.mutation) # If want m to be random multiple value each generation
+        else:
+            m = self.mutation # If want m to be constant value
+
+    
+
+"""
