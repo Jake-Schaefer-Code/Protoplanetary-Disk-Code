@@ -17,6 +17,9 @@ bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.05], [5.
 # Variable names corresponding to bound indices
 varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"]
 
+# Minimum and range of each entry in bounds
+bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
+
 # Checks if objective function value is low enough to stop
 def converged(fit):
     for chi in fit:
@@ -26,15 +29,17 @@ def converged(fit):
     
 # Checks if randomly selected parameters will generate a failed run
 def failCheck(params, r):
-    global varNames
     # if value less than, reject value
     # if within bounds of what we expect
     # h = h_0 (r/r_0)^beta
     # Making sure the params do not force an infinitesimally small disk
     if "betamod1" or "hInit" in varNames:
+        # TODO why do I need [0] ??????
+        params = ((params * brange) + bmin)[0]
         print(params)
         h0, beta, r0 = float(params[varNames.index("hInit")]), float(params[varNames.index("betamod1")]), 100
         h = h0 * ((r / r0) ** beta)
+        # params = ((params - bmin)/brange)[0]
         if h <= 0.005:
             print(h)
             return True
@@ -60,7 +65,7 @@ def findParam(name):
     print("This parameter is not in the file")    
 
 def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10, genNum = 0):
-    global count, count2, baseDir, bounds, varNames
+    global count, count2
 
     os.chdir(baseDir)
     subprocess.call(['mkdir gen' + str(count), '/'], shell=True)
@@ -68,7 +73,6 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
 
     N,K = bounds.shape[0]*popSize, bounds.shape[0]
     x = np.random.rand(N, K) # initial (normed) population array with random values
-    bmin, brange = bounds[:,0], np.diff(bounds.T, axis = 0)
 
     # Fit metrics: the chi square value for each population member
     fx = np.full(N, float('inf'))
@@ -117,7 +121,6 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
                 line = replaceValue(line, 1, str(newVal))
                 hPrev = newVal
                 modNum = int(varName[-1])
-                #print("heightmod", modNum, newVal)
                 if modNum < 5:
                     rPrev = float(lineDict["rinnermod" + str(modNum)][1])
                     rCur = float(lineDict["rinnermod" + str(modNum + 1)][1])
@@ -171,7 +174,7 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
             completeStr = 'Run ' + num2 + ' Failed. No chi value.'
 
         
-        f = open(runFolder + '/chi.dat', 'w')
+        f = open(runFolder + '/chi' + num2 + '.dat', 'w')
         f.write(str(chi))
         f.close()
 
@@ -235,13 +238,14 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
         # TODO: maybe insert this into the check code?
         for member in xtrial:
             index = np.where(xtrial == member)[0][0]
-            member = (member * brange + bmin)[0]
+            # member = (member * brange + bmin)[0]
             if failCheck(member, r):
                 print("check failed")
                 while failCheck(member, r):
                     print("making new vector")
                     member = np.random.rand(K)
-                    member = (member * brange + bmin)[0]
+                    # member = ((member * brange) + bmin)[0]
+                # member = (member - bmin)/brange
                 xtrial[index] = member
 
 
@@ -293,13 +297,13 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
     for member in x:
         index = np.where(x == member)[0][0]
         
-        # TODO why do I need [0] ??????
-        member = (member * brange + bmin)[0]
         if failCheck(member, r):
+            print("check failed")
             while failCheck(member, r):
                 print("making new vector")
                 member = np.random.rand(K)
             x[index] = member
+
 
     if resuming:
         # TODO: maybe just edit the resume function so i dont have to do this
@@ -321,7 +325,6 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
         elif count < 1:
             fx[(count2%50)-1:N+1] = np.array([objective_fn(xi) for xi in (x*brange+bmin)[(count2%50)-1:N+1]])
         
-        #print(np.shape(fx[count2-1:]))
         # TODO: something weird about this... fix later
         # TODO: got cannot cast shape (0,) to shape (6,) or vice versa error
     elif resuming == False:
