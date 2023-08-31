@@ -36,12 +36,12 @@ def failCheck(params, r):
     if "betamod1" or "hInit" in varNames:
         # TODO why do I need [0] ??????
         params = ((params * brange) + bmin)[0]
-        print(params)
+        #print(params)
         h0, beta, r0 = float(params[varNames.index("hInit")]), float(params[varNames.index("betamod1")]), 100
         h = h0 * ((r / r0) ** beta)
         # params = ((params - bmin)/brange)[0]
         if h <= 0.005:
-            print(h)
+            #print(h)
             return True
         
     return False
@@ -224,6 +224,7 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
 
         xtrial = np.zeros_like(x) # trial vector full of zeros
         j = np.argmin(fx) # index of best member
+        print("index of best member: ", j, fx[j])
 
         # Creates trial population, consisting of mutated and past vectors
         indices = np.arange(N)
@@ -240,9 +241,9 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
             index = np.where(xtrial == member)[0][0]
             # member = (member * brange + bmin)[0]
             if failCheck(member, r):
-                print("check failed")
+                #print("check failed")
                 while failCheck(member, r):
-                    print("making new vector")
+                    #print("making new vector")
                     member = np.random.rand(K)
                     # member = ((member * brange) + bmin)[0]
                 # member = (member - bmin)/brange
@@ -263,7 +264,7 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
             # For each run in the previous generation
             for j in range(len(pastRuns)):
                 runDir = "/run" + str((10 * len(varNames) * i) + j + 1)
-                params = population[i]
+                params = np.full_like(population[j], 0)
                 os.chdir(genDir + runDir)
                 runParams = open(genDir + runDir + "/modParameters.dat", "r").read()
                 lines = runParams.splitlines()
@@ -285,10 +286,16 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
                     if "chi" in str(file):
                         chiFile = open(genDir + runDir + '/' + str(file), "r").read()
                         chiVal = float(chiFile.splitlines()[0])
-                
-                print("gen num: ", i, "run num: ", j, population[i], params, chiVal) 
-                fx[j] = chiVal
+
+                print()
+                print("BEFORE CHECK: ", "gen num: ", i, "run num: ", j, population[j], params, fx[j], chiVal) 
+                if chiVal < fx[j]:
+                    fx[j] = chiVal
+                    population[j] = params
+
+                print("AFTER CHECK: ", "gen num: ", i, "run num: ", j, population[j], params, fx[j], chiVal)
                 os.chdir(genDir)
+                
                 numRuns += 1 # TODO: need to fix this so that it doesnt count a run without a chi value as a complete run
 
         return numRuns
@@ -319,6 +326,7 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
             xtrial = mutate(x, fx)
             os.chdir(baseDir + "/gen" + str(count))
             fxtrial[(count2%50)-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[(count2%50)-1:N+1]])
+            print(fxtrial)
             improved = fxtrial < fx # Array of booleans indicating which trial members were improvements
             x[improved], fx[improved] = xtrial[improved], fxtrial[improved] # Replaces values in population with improved ones
 
