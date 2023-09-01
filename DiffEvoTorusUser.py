@@ -12,7 +12,7 @@ baseDir = "/home/schaeferj/models"
 torusDir = "/home/schaeferj/torus/bin/torus.openmp"
 
 # Each entry bounds[i,:] = upper, lower bounds of i
-bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.05], [5.0, 20.0]])
+bounds = np.array([[1.5, 3.0], [1.0, 2.0], [0.00333, 0.0133], [0.001, 0.1], [5.0, 20.0]])
 
 # Variable names corresponding to bound indices
 varNames = ["alphamod1", "betamod1", "grainfrac1", "mdisc", "hInit"]
@@ -36,7 +36,7 @@ def failCheck(params, r):
     if "betamod1" or "hInit" in varNames:
         # TODO why do I need [0] ??????
         params = ((params * brange) + bmin)[0]
-        #print(params)
+        print(params)
         h0, beta, r0 = float(params[varNames.index("hInit")]), float(params[varNames.index("betamod1")]), 100
         h = h0 * ((r / r0) ** beta)
         # params = ((params - bmin)/brange)[0]
@@ -231,7 +231,7 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
         for i in indices:
             k,l = np.random.choice(indices[np.isin(indices, [i,j], invert=True)], 2) # Chooses 2 random vectors that are not xbest or xi
             xmi = np.clip(x[j] + m*(x[k]-x[l]),0,1) # Creates mutated xi vector: xbest + mutant vector
-            xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i]) # Probability that value will be replaced by xmi is 0.7 else = x[i]
+            xtrial[i] = np.where(np.random.rand(K) < P, xmi, x[i]) # Probability that value in vector will be replaced by xmi is 0.7 else = x[i]
             # TODO: maybe change this so that all are xmi, or at least dont run torus on runs that have been done
 
         r = findParam("rinnermod1")
@@ -241,10 +241,12 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
             index = np.where(xtrial == member)[0][0]
             # member = (member * brange + bmin)[0]
             if failCheck(member, r):
-                #print("check failed")
+                print("check failed")
                 while failCheck(member, r):
-                    #print("making new vector")
-                    member = np.random.rand(K)
+                    print("making new vector")
+                    k,l = np.random.choice(indices[np.isin(indices, [index,j], invert=True)], 2)
+                    xmi = np.clip(x[j] + m*(x[k]-x[l]),0,1)
+                    member = np.where(np.random.rand(K) < P, xmi, x[index])
                     # member = ((member * brange) + bmin)[0]
                 # member = (member - bmin)/brange
                 xtrial[index] = member
@@ -325,13 +327,21 @@ def differential_evolution(resuming, mutation = (0.5,1.0), P = 0.7, popSize = 10
         if count >= 1:
             xtrial = mutate(x, fx)
             os.chdir(baseDir + "/gen" + str(count))
-            fxtrial[(count2%50)-1:N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[(count2%50)-1:N+1]])
+            print(fx)
+            print(fxtrial)
+            print(xtrial)
+            startPos = count2
+            print(startPos)
+            print(fxtrial[((startPos-1)%50):N+1])
+            fxtrial[((startPos-1)%50):N+1] = np.array([objective_fn(xi) for xi in (xtrial*brange+bmin)[((startPos-1)%50):N+1]])
+            print(startPos)
             print(fxtrial)
             improved = fxtrial < fx # Array of booleans indicating which trial members were improvements
             x[improved], fx[improved] = xtrial[improved], fxtrial[improved] # Replaces values in population with improved ones
 
         elif count < 1:
-            fx[(count2%50)-1:N+1] = np.array([objective_fn(xi) for xi in (x*brange+bmin)[(count2%50)-1:N+1]])
+            startPos = count2
+            fx[((startPos-1)%50):N+1] = np.array([objective_fn(xi) for xi in (x*brange+bmin)[((startPos-1)%50):N+1]])
         
         # TODO: something weird about this... fix later
         # TODO: got cannot cast shape (0,) to shape (6,) or vice versa error
