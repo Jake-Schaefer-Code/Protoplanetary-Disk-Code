@@ -1,0 +1,182 @@
+!Modular disk 
+ 
+multilucyfiles T 
+vardustsub F 
+dustsettling T 
+gasopacityphysics F 
+maxmemory 24000 
+ 
+dustphysics T ! will use the dust microphysics 
+ 
+radeq T ! preform a radiative equilibrium calculation. If have a converged file you are inputting, set to zero. 
+ 
+readgrid F !Should a grid be read in? 
+writegrid T ! should the grid be written to a file? 
+outputfile gridfile !save restart file to this file 
+inputfile gridfile 
+amrgridsize 700000 ! the linear size of the top-level AMR mesh in units of 10^10 cm 
+amr2d T ! this is a 2d, cylindical model 
+mindepthamr 3 
+maxdepthamr 25 !max depth AMR cells 
+ 
+!smoothing grid 
+smoothgridtau T  ! smooths the grid for optical depth, in order to resolve disc photosphere 
+dosmoothgrid T   ! smooth the grid for jumps in cell refinement 
+smoothfactor 3.0 ! make sure that neighbouring cells are not only one AMR depth apart 
+heightsplitfac 0.1 
+lucy_undersampled 8 ! percentage of allowable bad cells 
+iterLucy 2 
+maxiter 6 
+stateq F 
+hydro F 
+nhydro 5 
+ 
+writescatsurface F 
+lambdatau 1.22e4 
+scatteringfilename scatsurface_J.dat 
+scatteringobsfilename scatsurface_obs_J.dat 
+ 
+geometry modular_sh !Geometry of the disk 
+ 
+!Source parameters 
+nsource 1 !Number of luminosity sources 
+radius1 1.7 !Radius of the star in solar radius units !Guzman-Diaz 
+teff1 8750. !Temperature of the star !Guzman-Diaz 
+contflux1 kurucz ! the continuum flux is assumed to be a blackbody 
+mass1 1.91 !Mass of the star !Guzman-Diaz 
+ 
+!Create modular disks 
+rsub 0.06 
+mdisc 0.08376194029025448 
+ 
+ndiscmodule 5 
+ 
+! Mod 1 !Inner disk 
+alphamod1 1.9956699173110355 
+betamod1 1.0837273457459602 
+heightmod1 0.03201272654920675 !defined at radius of outer disk 
+rinnermod1 0.41       !inner radius in au.100 stellar radii (set in a2 model) 
+routermod1 40. 
+dustfrac11 0.01 
+settlebeta11 1.0837273457459602 
+settleheight11 0.022408908584444723 
+dustslope11 0.0 
+dustfrac12 0.0175       !Fraction of dust species in disc module 
+settlebeta12 1.0837273457459602      !Dust beta parameter for disc module. Default to gas if not specified 
+settleheight12 0.0032012726549206748 !Dust scale height at inner radius of disc module (au) 
+dustslope12 0.0 
+ 
+ 
+! Mod 2 !GAP 1 
+alphamod2 1.9956699173110355 
+betamod2 1.0837273457459602 
+heightmod2 4.583060710289361 
+rinnermod2 40.0 
+routermod2 59.0 
+dustfrac21 0.0001 
+settlebeta21 1.0837273457459602 
+settleheight21 3.2081424972025525 
+dustslope21 0.0 
+dustfrac22 0.00001       !Fraction of dust species in disc module 
+settlebeta22 1.0837273457459602      !Dust beta parameter for disc module. Default to gas if not specified 
+settleheight22 0.45830607102893617  !Dust scale height at inner radius of disc module (au) 
+dustslope22 0.0 
+ 
+! Mod 3 !66 au RING 
+alphamod3 1.9956699173110355 
+betamod3 1.0837273457459602 
+heightmod3 6.983612576326108 
+rinnermod3 59.0 
+routermod3 73.0 
+dustfrac31 0.01 
+settlebeta31 1.0837273457459602 
+settleheight31 4.888528803428275 
+dustslope31 0.0 
+dustfrac32 0.01       !Fraction of dust species in disc module 
+settlebeta32 1.0837273457459602      !Dust beta parameter for disc module. Default to gas if not specified 
+settleheight32 0.6983612576326108  !Dust scale height at inner radius of disc module (au) 
+dustslope32 0.0 
+ 
+! Mod 4 !GAP 2 
+alphamod4 1.9956699173110355 
+betamod4 1.0837273457459602 
+heightmod4 8.796164154191871 
+rinnermod4 73.0 
+routermod4 100.0 
+dustfrac41 0.00001 
+settlebeta41 1.0837273457459602 
+settleheight41 6.1573149079343095 
+dustslope41 0.0 
+dustfrac42 0.00001       !Fraction of dust species in disc module 
+settlebeta42 1.0837273457459602      !Dust beta parameter for disc module. Default to gas if not specified 
+settleheight42 0.8796164154191871  !Dust scale height at inner radius of disc module (au) 
+dustslope42 0.0 
+ 
+! Mod 5 !End of Disk 
+alphamod5 1.9956699173110355 
+betamod5 1.0837273457459602 
+heightmod5 12.371264138377427 
+rinnermod5 100.0 
+routermod5 500.0 
+dustfrac51 0.01 
+settlebeta51 1.0837273457459602 
+settleheight51 8.659884896864199 
+dustslope51 0.0 
+dustfrac52 0.01       !Fraction of dust species in disc module 
+settlebeta52 1.0837273457459602      !Dust beta parameter for disc module. Default to gas if not specified 
+settleheight52 1.2371264138377427 !Dust scale height at inner radius of disc module (au) 
+dustslope52 0.0 
+ 
+ 
+iso_scatter F 
+ndusttype 2 
+ 
+!Small (micron) dust grains 
+graintype1 sil_dl 
+grainfrac1 0.004649378074862749 
+tsub1 1800. 
+tsubpower1 0.0195 
+amin1 0.01 
+amax1 50. 
+qdist1 3.5 
+a01 1e20 
+pdist1 10.0 
+ 
+!settled large dust grains 
+graintype2 sil_dl 
+grainfrac2 0.01 
+tsub2 2000. 
+tsubpower2 0.0195 
+amin2 50. 
+amax2 3000. 
+qdist2 3.5 
+a02 1e20 
+pdist2 3000 
+ 
+ 
+spectrum T !Create SED 
+ 
+!Output SEDs 
+ninc 1            ! Number of inclinations 
+firstinc 12.5     ! the first inclination (degrees) 
+lastinc 77.5      ! the last inclination (degrees) 
+!nphotons 5000000   ! the number of photon packets in each SED 
+nphotspec 5000000  !number of phonots in the spectrum 
+filename sed ! the root of the output filename 
+sised T             ! write spectrum as lambda vs F lambda in SI units 
+distance 101.5       ! Distance to observer 
+sedlammin 0.12      ! minimum wavelength in SED file 
+sedlammax 4000      ! Linear spacing in SED file 
+ 
+!Output Image 
+image F !Create image 
+polimage T !Should it create polarization images? 
+nimage 1 !Number of images 
+nphotimage 100000 !number of photons used in the image 
+imagefluxunits mJy/arcsec2 
+imageaxisunits AU !Specify image units (either AU or pc) 
+imagesize 410. !specify the image size 
+imagefile disk_J.fits    !filename 
+npixels 177      !Width of image in pixels 
+lambdaimage 1.22e4    !monochromatic wavelength of image units: \AA 
+inclination 42.0 !inclination of the image (zero is face-on) !inc from inner disk Kluska et al. 2020  
